@@ -23,19 +23,20 @@ local <const> Loop = {}
 -- Input:
 --   1) table: aes: aes instance
 --   2) table: vdi: vdi instance
---   3) table: rsrc: rsrc instance
---   4) string: rsrc_dir: the directory that contains the resource file
---   5) table: cdefs: C defines table for the resource
+--   3) string: init_dir: the directory that contains the initial job
+--   4) optional table: rsrc: rsrc instance
+--   5) optional table: cdefs: C defines table for the resource
 -- Returns:
 --   1) table: the loop instance
-function Loop:new(aes, vdi, rsrc, rsrc_dir, cdefs, o)
+function Loop:new(aes, vdi, init_dir, rsrc, cdefs, o)
+  assert(aes and vdi and init_dir)
   o = o or {}
 
   -- Used by jobs
   o.aes = aes
   o.vdi = vdi
+  o.init_dir = init_dir
   o.rsrc = rsrc
-  o.rsrc_dir = rsrc_dir
   o.cdefs = cdefs
   o.return_code = 0
   o.ap_id = aes:pb():peek(k_aes_global, 2)
