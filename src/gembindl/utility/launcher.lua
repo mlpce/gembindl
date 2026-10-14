@@ -1,4 +1,5 @@
-global assert, debug, gemdos, gempb, loadfile, pcall, require, string, xpcall
+global assert, debug, gemdos, gempb, loadfile, pcall, require, string,
+  type, xpcall
 
 local <const> k_RCache = require("gembindl.utility.rcache")
 local <const> k_AES = k_RCache.require("gembindl.aes")
@@ -72,6 +73,7 @@ function Launcher:launch(jobinit_fname, rsrc_fname, header_fname)
   local return_code = 1
   if istatus then
     -- Add the initial job to the loop
+    assert(type(initial_job) == "table")
     loop:add_job(initial_job, "init")
 
     -- Done with initial job

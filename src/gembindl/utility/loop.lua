@@ -41,10 +41,12 @@ function Loop:new(aes, vdi, init_dir, rsrc, cdefs, o)
   o.return_code = 0
   o.ap_id = aes:pb():peek(k_aes_global, 2)
 
-  -- Raise an error if key is not found in cdefs
-  setmetatable(cdefs, { __index = function(t, k)
-      return error(string.format("key %q not in cdefs", k), 2)
-    end })
+  if cdefs then
+    -- Raise an error if key is not found in cdefs
+    setmetatable(cdefs, { __index = function(t, k)
+        return error(string.format("key %q not in cdefs", k), 2)
+      end })
+  end
 
   -- Used internally
   o.jobs_ = {}
@@ -264,6 +266,7 @@ function Loop:update_jobs_()
       local <const> job_id = v.job_id
       if running and not jobs[job_id] then
         local <const> init_result = v:init_job()
+        assert(init_result == true or init_result == false)
         if init_result then
           -- Job is running
           jobs[job_id] = v
@@ -287,6 +290,7 @@ function Loop:update_jobs_()
       -- Only call term_job if the job is running
       if jobs[job_id] == v then
         local <const> term_result = v:term_job()
+        assert(term_result == true or term_result == false)
         if term_result then
           -- job has terminated
           jobs[job_id] = nil
