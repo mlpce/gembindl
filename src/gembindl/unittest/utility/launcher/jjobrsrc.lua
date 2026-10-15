@@ -7,6 +7,7 @@ local <const> k_grmo_arrow = aesdefs.grmo_arrow
 aesdefs = nil
 
 local <const> JJobRsrc = {
+  -- Dispatch timer events to the job
   evmu_mask = k_evmu_timer
 }
 
@@ -17,9 +18,12 @@ function JJobRsrc:init_job()
   -- Get the loop the job is part of
   local <const> loop = self.loop
 
+  -- Read the freestring from the resource
   local <const> rsrc, cdefs = loop.rsrc, loop.cdefs
   local <const> freestring_offset = rsrc:frstr_offset(cdefs.fs1_message)
   local <const> message = rsrc:reads(freestring_offset, nil, 0)
+  -- Check it matches the expected value
+  assert(message == "JJobRsrc: Testing launcher with a resource file")
   gemdos.Cconws(message .. "\r\n")
 
   -- Change the mouse pointer to an arrow.

@@ -7,6 +7,7 @@ local <const> k_grmo_arrow = aesdefs.grmo_arrow
 aesdefs = nil
 
 local <const> JJobNone = {
+  -- Dispatch timer events to the job
   evmu_mask = k_evmu_timer
 }
 
