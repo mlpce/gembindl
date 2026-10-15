@@ -71,7 +71,13 @@ function Rsrc:wrap_rsrc_()
   high, low = pb:peek(k_aes_global, 5, 2)
   local <const> aptree_addr = (high & 0xFFFF) << 16 | (low & 0xFFFF)
   assert(aptree_addr ~= 0)
-  self.tree_addr_ = k_wrapm(aptree_addr, header.ntree << 2):readt(k_s32, 0)
+  if header.ntree > 0 then
+    -- Read tree address into a table
+    self.tree_addr_ = k_wrapm(aptree_addr, header.ntree << 2):readt(k_s32, 0)
+  else
+    -- No trees so there are no tree addresses
+    self.tree_addr_ = {}
+  end
 
   -- Obtain tree offsets in the wrapped resource
   local <const> rsrc_mud_address = rsrc_mud:address()

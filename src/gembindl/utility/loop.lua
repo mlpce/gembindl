@@ -23,27 +23,30 @@ local <const> Loop = {}
 -- Input:
 --   1) table: aes: aes instance
 --   2) table: vdi: vdi instance
---   3) table: rsrc: rsrc instance
---   4) string: rsrc_dir: the directory that contains the resource file
---   5) table: cdefs: C defines table for the resource
+--   3) string: init_dir: the directory that contains the initial job
+--   4) optional table: rsrc: rsrc instance
+--   5) optional table: cdefs: C defines table for the resource
 -- Returns:
 --   1) table: the loop instance
-function Loop:new(aes, vdi, rsrc, rsrc_dir, cdefs, o)
+function Loop:new(aes, vdi, init_dir, rsrc, cdefs, o)
+  assert(aes and vdi and init_dir)
   o = o or {}
 
   -- Used by jobs
   o.aes = aes
   o.vdi = vdi
+  o.init_dir = init_dir
   o.rsrc = rsrc
-  o.rsrc_dir = rsrc_dir
   o.cdefs = cdefs
   o.return_code = 0
   o.ap_id = aes:pb():peek(k_aes_global, 2)
 
-  -- Raise an error if key is not found in cdefs
-  setmetatable(cdefs, { __index = function(t, k)
-      return error(string.format("key %q not in cdefs", k), 2)
-    end })
+  if cdefs then
+    -- Raise an error if key is not found in cdefs
+    setmetatable(cdefs, { __index = function(t, k)
+        return error(string.format("key %q not in cdefs", k), 2)
+      end })
+  end
 
   -- Used internally
   o.jobs_ = {}
@@ -263,6 +266,7 @@ function Loop:update_jobs_()
       local <const> job_id = v.job_id
       if running and not jobs[job_id] then
         local <const> init_result = v:init_job()
+        assert(init_result == true or init_result == false)
         if init_result then
           -- Job is running
           jobs[job_id] = v
@@ -286,6 +290,7 @@ function Loop:update_jobs_()
       -- Only call term_job if the job is running
       if jobs[job_id] == v then
         local <const> term_result = v:term_job()
+        assert(term_result == true or term_result == false)
         if term_result then
           -- job has terminated
           jobs[job_id] = nil

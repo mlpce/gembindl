@@ -6,7 +6,7 @@ local <const> Utility = {}
 --   2) integer: Utility minor version
 --   3) integer: Utility micro version
 function Utility.version()
-  return 1, 0, 0
+  return 1, 1, 0
 end
 
 return Utility

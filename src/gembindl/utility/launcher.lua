@@ -1,4 +1,5 @@
-global debug, gemdos, gempb, loadfile, pcall, require, string, xpcall
+global assert, debug, gemdos, gempb, loadfile, pcall, require, string,
+  type, xpcall
 
 local <const> k_RCache = require("gembindl.utility.rcache")
 local <const> k_AES = k_RCache.require("gembindl.aes")
@@ -12,20 +13,35 @@ local <const> error_handler = debug and debug.traceback or
 
 local <const> Launcher = {}
 
-function Launcher:launch(rsrc_fname, header_fname, jobinit_fname)
-  local <const> pb = gempb.create_pb()
-  local <const> aes, vdi, rsrc = k_AES:new(pb), k_VDI:new(pb), k_Rsrc:new(pb)
+-- Launch a program
+-- Inputs:
+--   1) string: jobinit_fname: Name of the initial job
+--   2) optional string: rsrc_fname: Name of the resource file
+--   3) optional string: header_fname: Name of the resource C header
+function Launcher:launch(jobinit_fname, rsrc_fname, header_fname)
+  -- The initial job to launch must be specified
+  assert(jobinit_fname)
+  if rsrc_fname or header_fname then
+    -- If the program uses a resource file, both the resource filename
+    -- and C header filename must be specified.
+    assert(rsrc_fname and header_fname)
+  end
 
-  -- Initialise
+  -- Create the GEM parameter block
+  local <const> pb = gempb.create_pb()
+  -- Create AES and VDI tables using the created parameter block
+  local <const> aes, vdi = k_AES:new(pb), k_VDI:new(pb)
+
+  -- Initialise with AES
   self.ap_id_, self.aes_ver_ = aes:appl_init()
   if self.ap_id_ == -1 then
     gemdos.Cconws("appl_init failed\r\n")
     return 1
   end
 
-  -- Load assets
+  -- Load assets: initial job, optionally resource and its C header
   local status, alert_str, jobinit_error_str =
-    self:load_assets_(aes, rsrc_fname, header_fname, jobinit_fname)
+    self:load_assets_(aes, jobinit_fname, rsrc_fname, header_fname)
   if not status then
     -- If loadfile for jobinit failed then log the error
     if jobinit_error_str then
@@ -41,18 +57,23 @@ function Launcher:launch(rsrc_fname, header_fname, jobinit_fname)
     return 1
   end
 
-  -- Wrap the resource
-  rsrc:wrap()
+  -- If a resource is being used then wrap it
+  local rsrc
+  if rsrc_fname then
+    rsrc = k_Rsrc:new(pb)
+    rsrc:wrap()
+  end
 
-  -- Create the event loop
-  local <const> loop = k_Loop:new(aes, vdi, rsrc,
-    self.rsrc_dir_, self.cdefs_)
+  -- Create the event loop. rsrc and self.cdefs_ may be nil
+  local <const> loop = k_Loop:new(aes, vdi,
+    self.jobinit_dir_, rsrc, self.cdefs_)
 
   -- Call jobinit_ chunk for initial job
   local istatus <const>, initial_job = xpcall(self.jobinit_, error_handler)
   local return_code = 1
   if istatus then
     -- Add the initial job to the loop
+    assert(type(initial_job) == "table")
     loop:add_job(initial_job, "init")
 
     -- Done with initial job
@@ -89,11 +110,13 @@ function Launcher:launch(rsrc_fname, header_fname, jobinit_fname)
     aes:form_alert(1, "[3][error calling jobinit chunk][Exit]")
   end
 
-  -- Unwrap the resource
-  rsrc:unwrap()
-
-  -- Free the resource
-  aes:rsrc_free()
+  -- If using a resource then unwrap it and free it
+  if rsrc then
+    -- Unwrap the resource
+    rsrc:unwrap()
+    -- Free the resource
+    aes:rsrc_free()
+  end
 
   -- appl_exit
   aes:appl_exit()
@@ -102,40 +125,28 @@ function Launcher:launch(rsrc_fname, header_fname, jobinit_fname)
 end
 
 -- Load assets
-function Launcher:load_assets_(aes, rsrc_fname, header_fname, jobinit_fname)
-  -- Find resource file
-  local status, rsrc_location = aes:shel_find(rsrc_fname)
-  local rsrc_found
+function Launcher:load_assets_(aes, jobinit_fname, rsrc_fname, header_fname)
+  -- Find the initial job
+  local status, jobinit_location = aes:shel_find(jobinit_fname)
+  local jobinit_found
   if status > 0 then
-    -- Found resource file. Normalize the path.
-    status, rsrc_location = k_Path.normalize_path(rsrc_location)
+    -- Found initial job. Normalize the path.
+    status, jobinit_location = k_Path.normalize_path(jobinit_location)
     -- status will be 0 if normalize was successful
-    rsrc_found = status == 0
+    jobinit_found = status == 0
   end
 
-  if not rsrc_found then
+  if not jobinit_found then
     return false,
-      "[3][Could not find resource|file " .. rsrc_fname .. "][Exit]"
+      "[3][Could not find job|file " .. jobinit_fname .. "][Exit]"
   end
 
-  -- Get directory containing the resource
-  self.rsrc_dir_ = k_Path.dir_from_path(rsrc_location)
-
-  -- Load cdefs for resource file
-  local ec
-  ec, self.cdefs_ =
-    k_RCache.require("gembindl.utility.disk.text").load_cdefs(
-      k_Path.join_path(self.rsrc_dir_, header_fname))
-  if ec ~= 0 then
-    -- Header file could not be loaded
-    return false,
-      "[3][Could not load header|file " .. header_fname .. "][Exit]"
-  end
+  -- Get directory containing the initial job
+  self.jobinit_dir_ = k_Path.dir_from_path(jobinit_location)
 
   -- Load the initial job
   local jobinit_error_str
-  self.jobinit_, jobinit_error_str =
-    loadfile(k_Path.join_path(self.rsrc_dir_, jobinit_fname))
+  self.jobinit_, jobinit_error_str = loadfile(jobinit_location)
   if not self.jobinit_ then
     -- jobinit could not be loaded
     -- jobinit_error_str is a string describing the error
@@ -144,11 +155,26 @@ function Launcher:load_assets_(aes, rsrc_fname, header_fname, jobinit_fname)
       jobinit_error_str
   end
 
-  -- Load resource file
-  status = aes:rsrc_load(rsrc_fname)
-  if status <= 0 then
-    return false,
-      "[3][Could not load resource|file " .. rsrc_fname .. "][Exit]"
+  -- When using a resource both the resource filename and C header
+  -- filename must be specified.
+  if rsrc_fname and header_fname then
+    -- Load cdefs for resource file
+    local ec
+    ec, self.cdefs_ =
+      k_RCache.require("gembindl.utility.disk.text").load_cdefs(
+        k_Path.join_path(self.jobinit_dir_, header_fname))
+    if ec ~= 0 then
+      -- Header file could not be loaded
+      return false,
+        "[3][Could not load header|file " .. header_fname .. "][Exit]"
+    end
+
+    -- Load resource file
+    status = aes:rsrc_load(rsrc_fname)
+    if status <= 0 then
+      return false,
+        "[3][Could not load resource|file " .. rsrc_fname .. "][Exit]"
+    end
   end
 
   return true
