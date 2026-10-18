@@ -1,4 +1,4 @@
-global assert, require, setmetatable, next, ipairs, pairs, string, type,
+global assert, require, setmetatable, next, ipairs, string, type,
   gemdos
 
 local <const> k_RCache = require("gembindl.utility.rcache")
