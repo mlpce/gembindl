@@ -10,6 +10,7 @@ local <const> k_Path = k_RCache.require("gembindl.utility.disk.path")
 
 local <const> error_handler = debug and debug.traceback or
   function(err) return err end
+local <const> clr_scr_home_cur_wrap = "\x1bE\x1bv"
 
 local <const> Launcher = {}
 
@@ -45,7 +46,8 @@ function Launcher:launch(jobinit_fname, rsrc_fname, header_fname)
   if not status then
     -- If loadfile for jobinit failed then log the error
     if jobinit_error_str then
-      gemdos.Cconws("jobinit: load: " ..
+      gemdos.Cconws(
+        clr_scr_home_cur_wrap .. "jobinit: load: " ..
         string.gsub(jobinit_error_str, "\r?\n", "\r\n") .. "\r\n")
     end
 
@@ -88,7 +90,8 @@ function Launcher:launch(jobinit_fname, rsrc_fname, header_fname)
 
       -- An error occurred while running the loop. v is a string
       -- describing the error
-      gemdos.Cconws("run: error: " ..
+      gemdos.Cconws(
+        clr_scr_home_cur_wrap .. "run: error: " ..
         string.gsub(v, "\r?\n", "\r\n") .. "\r\n")
 
       if not astatus then
@@ -105,7 +108,8 @@ function Launcher:launch(jobinit_fname, rsrc_fname, header_fname)
   else
     -- An error occurred while calling jobinit chunk
     -- initial_job is a string describing the error
-    gemdos.Cconws("jobinit: failed: " ..
+    gemdos.Cconws(
+      clr_scr_home_cur_wrap .. "jobinit: failed: " ..
       string.gsub(initial_job, "\r?\n", "\r\n") .. "\r\n")
     aes:form_alert(1, "[3][error calling jobinit chunk][Exit]")
   end
