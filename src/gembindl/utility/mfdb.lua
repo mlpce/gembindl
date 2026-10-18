@@ -21,7 +21,10 @@ function MFDB:new(o)
   o.mfdb_addr_ = mud:address()
 
   self.__index = self
-  self.__close = function (v) v.mfdb_mud_:free() end
+  self.__close = function (v)
+    v.mfdb_mud_:free()
+    v.mfdb_addr_ = 0
+  end
   return setmetatable(o, self )
 end
 
