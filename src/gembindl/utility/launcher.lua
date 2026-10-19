@@ -5,7 +5,6 @@ local <const> k_RCache = require("gembindl.utility.rcache")
 local <const> k_AES = k_RCache.require("gembindl.aes")
 local <const> k_VDI = k_RCache.require("gembindl.vdi")
 local <const> k_Loop = k_RCache.require("gembindl.utility.loop")
-local <const> k_Rsrc = k_RCache.require("gembindl.utility.resource.rsrc")
 local <const> k_Path = k_RCache.require("gembindl.utility.disk.path")
 
 local <const> error_handler = debug and debug.traceback or
@@ -62,7 +61,8 @@ function Launcher:launch(jobinit_fname, rsrc_fname, header_fname)
   -- If a resource is being used then wrap it
   local rsrc
   if rsrc_fname then
-    rsrc = k_Rsrc:new(pb)
+    local <const> Rsrc = k_RCache.require("gembindl.utility.resource.rsrc")
+    rsrc = Rsrc:new(pb)
     rsrc:wrap()
   end
 
