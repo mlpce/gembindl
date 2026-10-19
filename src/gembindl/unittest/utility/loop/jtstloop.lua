@@ -210,6 +210,10 @@ function JTstLoop:dispatch(
         end
         last_bias = j.bias
         last_job_id = j.job_id
+
+        -- Check job is accessible by job name and job id
+        assert(loop:get_job_by_name(j.job_name) == j)
+        assert(loop:get_job_by_id(j.job_id) == j)
       end
 
       -- Send JTester job a mesag
