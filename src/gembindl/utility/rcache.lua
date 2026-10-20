@@ -69,13 +69,25 @@ function RCache.stats()
   return cached, reqs_hit, reqs_miss
 end
 
+-- reset_stats. Resets cache statistics
+function RCache.reset_stats()
+  reqs_hit = 0
+  reqs_miss = 0
+end
+
 -- set_keep. Enables and disables keeping. On disabling
 -- keep table is replaced with empty table.
 -- Input:
 --   1) boolean: true to enable keeping otherwise false
 function RCache.set_keep(enable)
   RCache.keeping = enable
-  if not enable then
+  if enable then
+    -- Copy tables from reqs to keep
+    local <const> keep = RCache.keep
+    for k,v in pairs(RCache.reqs) do
+      keep[k] = v
+    end
+  else
     RCache.keep = {}
   end
 end
