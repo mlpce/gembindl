@@ -69,6 +69,12 @@ function RCache.stats()
   return cached, reqs_hit, reqs_miss
 end
 
+-- reset_stats. Resets cache statistics
+function RCache.reset_stats()
+  reqs_hit = 0
+  reqs_miss = 0
+end
+
 -- set_keep. Enables and disables keeping. On disabling
 -- keep table is replaced with empty table.
 -- Input:
