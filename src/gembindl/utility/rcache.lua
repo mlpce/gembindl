@@ -81,7 +81,13 @@ end
 --   1) boolean: true to enable keeping otherwise false
 function RCache.set_keep(enable)
   RCache.keeping = enable
-  if not enable then
+  if enable then
+    -- Copy tables from reqs to keep
+    local <const> keep = RCache.keep
+    for k,v in pairs(RCache.reqs) do
+      keep[k] = v
+    end
+  else
     RCache.keep = {}
   end
 end
