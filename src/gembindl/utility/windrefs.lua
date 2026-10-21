@@ -41,16 +41,18 @@ end
 --   Values from dialog_f
 function WindRefs:call_modal(dialog_f)
   -- Inform each view that a modal dialog is about to be displayed
-  for k,v in self:pairs() do
-    v:view():view_modal_override(true)
+  for handle, wind in self:pairs() do
+    local <const> view = wind:view()
+    view:view_modal_override(wind, true)
   end
 
   -- Display the modal dialog, storing the results in modal_pack_t
   local <const> modal_pack_t = table.pack(dialog_f())
 
   -- Inform each view that the modal dialog has been removed
-  for k,v in self:pairs() do
-    v:view():view_modal_override(false)
+  for handle, wind in self:pairs() do
+    local <const> view = wind:view()
+    view:view_modal_override(wind, false)
   end
 
   -- Return the results

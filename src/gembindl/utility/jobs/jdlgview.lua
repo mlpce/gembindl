@@ -106,8 +106,9 @@ end
 
 -- view_modal_override. Overrides view across a modal operation
 -- Inputs:
---   1) boolean: override: true pre-modal, false post-modal
-function JDlgView:view_modal_override(override)
+--   1) table: wind: the Wind instance
+--   2) boolean: override: true pre-modal, false post-modal
+function JDlgView:view_modal_override(wind, override)
   -- View only displays a cursor if it is the top window
   if not self.topped_ or
       self.wind_:top_handle() ~= self.wind_:handle() then
