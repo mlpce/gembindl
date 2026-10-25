@@ -389,11 +389,20 @@ function Wind:send_redraw(x, y, w, h)
     return
   end
 
-  -- Constrain the damage rectangle
-  x, y, w, h = self.rcconstrain(
+  -- Intersect the damage rectangle with the desktop area
+  local intersect
+  intersect, x, y, w, h = self.rcintersect(
     self.deskx_, self.desky_, self.deskw_, self.deskh_,
     x, y, w, h)
 
+  if not intersect then
+    -- Still send the redraw with zero width and height.
+    -- The application may have sent the redraw to resume a coroutine
+    w = 0
+    h = 0
+  end
+
+  -- Send redraw for intersection
   local <const> ap_id = self.ap_id_
   return self.aes_:appl_write_v(
     ap_id, -- destination application id
