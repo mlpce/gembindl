@@ -103,8 +103,9 @@ end
 
 -- view_modal_override. Overrides view across a modal operation
 -- Inputs:
---   1) boolean: override: true pre-modal, false post-modal
-function JTxtView:view_modal_override(override)
+--   1) table: wind: the Wind instance
+--   2) boolean: override: true pre-modal, false post-modal
+function JTxtView:view_modal_override(wind, override)
 end
 
 -- set_max_lines. Changes the maxmimum number of lines

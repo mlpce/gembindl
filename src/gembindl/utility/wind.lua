@@ -208,10 +208,14 @@ function Wind:create(controls, fullx, fully, fullw, fullh)
     self.aes_:wind_get(0, k_wige_workxywh)
   assert(status > 0)
 
-  -- Constrain full window rectangle to desktop work area
-  fullx, fully, fullw, fullh = self.rcconstrain(
+  -- Intersect full window rectangle with desktop work area
+  local intersect
+  intersect, fullx, fully, fullw, fullh = self.rcintersect(
     self.deskx_, self.desky_, self.deskw_, self.deskh_,
     fullx, fully, fullw, fullh)
+  if not intersect then
+    return false
+  end
 
   -- Full window rectangle
   self.fx_, self.fy_, self.fw_, self.fh_ =
@@ -227,6 +231,7 @@ function Wind:create(controls, fullx, fully, fullw, fullh)
   local <const> wi_handle = self.aes_:wind_create(
     controls, fullx, fully, fullw, fullh)
   if wi_handle < 0 then
+    self:destroy_muds_()
     return false
   end
 
@@ -389,11 +394,20 @@ function Wind:send_redraw(x, y, w, h)
     return
   end
 
-  -- Constrain the damage rectangle
-  x, y, w, h = self.rcconstrain(
+  -- Intersect the damage rectangle with the desktop area
+  local intersect
+  intersect, x, y, w, h = self.rcintersect(
     self.deskx_, self.desky_, self.deskw_, self.deskh_,
     x, y, w, h)
 
+  if not intersect then
+    -- Still send the redraw with zero width and height.
+    -- The application may have sent the redraw to resume a coroutine
+    w = 0
+    h = 0
+  end
+
+  -- Send redraw for intersection
   local <const> ap_id = self.ap_id_
   return self.aes_:appl_write_v(
     ap_id, -- destination application id
