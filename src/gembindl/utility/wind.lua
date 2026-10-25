@@ -231,6 +231,7 @@ function Wind:create(controls, fullx, fully, fullw, fullh)
   local <const> wi_handle = self.aes_:wind_create(
     controls, fullx, fully, fullw, fullh)
   if wi_handle < 0 then
+    self:destroy_muds_()
     return false
   end
 

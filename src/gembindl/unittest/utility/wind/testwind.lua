@@ -1,4 +1,4 @@
-global assert, require, gempb, gemdos, setmetatable, table
+global assert, require, gempb, gemdos, ipairs, setmetatable, table
 
 local <const> WindRefs = require("gembindl.utility.windrefs")
 local <const> AES = require("gembindl.aes")
@@ -404,7 +404,7 @@ wind2:set_view(view2)
 assert(wind2:view() == view2)
 
 -- Create a window
-local controls = aesdefs.wicr_name |
+controls = aesdefs.wicr_name |
   aesdefs.wicr_closer | aesdefs.wicr_mover
 
 -- full coordinates will be constrained to desktop, however this window
@@ -547,6 +547,29 @@ end
 -- Both wind1 and wind2 refs are no longer in WindRefs
 assert(WindRefs:get_wind(wind1:handle()) == nil)
 assert(WindRefs:get_wind(wind2:handle()) == nil)
+
+-- Test window creation failure. create must return false if window
+-- creation failed. It must also discard muds immediately on creation
+-- failure.
+controls = aesdefs.wicr_name | aesdefs.wicr_info |
+  aesdefs.wicr_closer | aesdefs.wicr_mover
+local winds = {}
+repeat
+  local <const> wind = Wind:new(aes, vdi)
+  local <const> created = wind:create(controls, deskx, desky, deskw, deskh)
+  if created then
+    assert(wind.name_mud_:address() ~= 0)
+    assert(wind.info_mud_:address() ~= 0)
+    winds[#winds + 1] = wind
+  else
+    assert(wind.name_mud_ == nil)
+    assert(wind.info_mud_ == nil)
+  end
+until not created 
+assert(#winds > 0)
+for k,v in ipairs(winds) do
+  v:delete()
+end
 
 -- Close virtual workstation for screen
 vdi:v_clsvwk(svwk_h)
