@@ -117,16 +117,6 @@ local <const> vdi = VDI:new(pb)
 
 -- appl_init
 local <const> ap_id = aes:appl_init()
--- Open virtual workstation for screen
-local <const> gh, wcel, hcel, wbox, hbox = aes:graf_handle()
-gemdos.Cconws("hcel: " .. hcel .. "\r\n")
-
-local <const> svwk_h, workout = vdi:v_opnvwk(gh)
-assert(#workout == 57)
-
--- Set clip
-local <const> x_max, y_max = workout[1], workout[2]
-vdi:vs_clip(svwk_h, 1, 0, 0, x_max, y_max)
 
 -- get work area of desktop window
 local status, deskx, desky, deskw, deskh =
@@ -570,9 +560,6 @@ assert(#winds > 0)
 for k,v in ipairs(winds) do
   v:delete()
 end
-
--- Close virtual workstation for screen
-vdi:v_clsvwk(svwk_h)
 
 -- appl_exit
 aes:appl_exit()
