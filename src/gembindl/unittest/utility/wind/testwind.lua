@@ -1,5 +1,6 @@
 global assert, require, gempb, gemdos, setmetatable, table
 
+local <const> WindRefs = require("gembindl.utility.windrefs")
 local <const> AES = require("gembindl.aes")
 local <const> VDI = require("gembindl.vdi")
 local <const> Wind = require("gembindl.utility.wind")
@@ -151,6 +152,11 @@ end
 wind1:set_view(view1)
 assert(wind1:view() == view1)
 
+-- WindRefs must contain no windows
+for k,v in WindRefs:pairs() do
+  assert(false)
+end
+
 -- Create a window
 local controls = aesdefs.wicr_name |
   aesdefs.wicr_closer | aesdefs.wicr_fuller | aesdefs.wicr_mover |
@@ -161,6 +167,19 @@ local controls = aesdefs.wicr_name |
 -- full coordinates must be constrained to desktop
 local created = wind1:create(controls, -100, -200, 10000, 10100)
 assert(created)
+
+-- WindRefs must now contain the wind1 reference
+local found_wind1 = false
+for k,v in WindRefs:pairs() do
+  if v == wind1 then
+    found_wind1 = true
+  else
+    assert(false)
+  end
+end
+assert(found_wind1)
+-- Check WindRefs get_wind can get the Wind from the window handle
+assert(WindRefs:get_wind(wind1:handle()) == wind1)
 
 -- slider positions
 wind1:set_hslpos(0)
@@ -393,6 +412,41 @@ local controls = aesdefs.wicr_name |
 local created = wind2:create(controls, deskx, desky, deskw, deskh)
 assert(created)
 
+-- WindRefs must now contain the wind1 and wind2 references
+local found_wind2
+found_wind1, found_wind2 = false, false
+for k,v in WindRefs:pairs() do
+  if v == wind1 then
+    found_wind1 = true
+  elseif v == wind2 then
+    found_wind2 = true
+  else
+    assert(false)
+  end
+end
+assert(found_wind1 and found_wind2)
+-- Check WindRefs get_wind can get the Wind from the window handle
+assert(WindRefs:get_wind(wind1:handle()) == wind1)
+assert(WindRefs:get_wind(wind2:handle()) == wind2)
+
+-- Call WindRefs call_modal. When the passed function callback runs,
+-- both views must have their override flag set.
+WindRefs:call_modal(function()
+    assert(view1.res.wind == wind1)
+    assert(view1.res.override == true)
+    assert(view2.res.wind == wind2)
+    assert(view2.res.override == true)
+  end)
+
+-- After call_modal returns, both views must have their override flag
+-- set to false
+assert(view1.res.wind == wind1)
+assert(view1.res.override == false)
+assert(view2.res.wind == wind2)
+assert(view2.res.override == false)
+view1:clear_results()
+view2:clear_results()
+
 -- Open the second window
 local opened = wind2:open(deskx, desky, deskw, deskh)
 assert(opened)
@@ -457,6 +511,22 @@ view2:clear_results()
 local deleted = wind2:delete()
 assert(deleted)
 
+-- wind2 has been deleted, WindRefs now only contains a reference to wind1
+found_wind1 = false
+for k,v in WindRefs:pairs() do
+  if v == wind1 then
+    found_wind1 = true
+  else
+    assert(false)
+  end
+end
+assert(found_wind1)
+-- Check WindRefs get_wind can get the Wind from the window handle
+assert(WindRefs:get_wind(wind1:handle()) == wind1)
+-- wind2 window has been deleted so the reference must no longer be
+-- in WindRefs
+assert(WindRefs:get_wind(wind2:handle()) == nil)
+
 -- Close the first window. The Wind must notify its view that the window
 -- has been closed.
 closed = wind1:close()
@@ -468,6 +538,15 @@ view1:clear_results()
 -- Delete the window
 deleted = wind1:delete()
 assert(deleted)
+
+-- WindRefs now contains no references
+for k,v in WindRefs:pairs() do
+  assert(false)
+end
+
+-- Both wind1 and wind2 refs are no longer in WindRefs
+assert(WindRefs:get_wind(wind1:handle()) == nil)
+assert(WindRefs:get_wind(wind2:handle()) == nil)
 
 -- Close virtual workstation for screen
 vdi:v_clsvwk(svwk_h)
