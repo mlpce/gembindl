@@ -208,10 +208,14 @@ function Wind:create(controls, fullx, fully, fullw, fullh)
     self.aes_:wind_get(0, k_wige_workxywh)
   assert(status > 0)
 
-  -- Constrain full window rectangle to desktop work area
-  fullx, fully, fullw, fullh = self.rcconstrain(
+  -- Intersect full window rectangle with desktop work area
+  local intersect
+  intersect, fullx, fully, fullw, fullh = self.rcintersect(
     self.deskx_, self.desky_, self.deskw_, self.deskh_,
     fullx, fully, fullw, fullh)
+  if not intersect then
+    return false
+  end
 
   -- Full window rectangle
   self.fx_, self.fy_, self.fw_, self.fh_ =
