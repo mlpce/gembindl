@@ -4,6 +4,7 @@ local <const> k_aes_global = gempb.const.Pbid.aes_global
 local <const> k_RCache = require("gembindl.utility.rcache")
 local aesdefs = k_RCache.require("gembindl.utility.defs.aesdefs")
 local <const> k_evme_mn_selected = aesdefs.evme_mn_selected
+local <const> k_evmu_mesag = aesdefs.evmu_mesag
 local <const> k_metn_reverse = aesdefs.metn_reverse
 local <const> k_metn_normal = aesdefs.metn_normal
 local <const> k_grmk_control = aesdefs.grmk_control
@@ -115,7 +116,8 @@ end
 --   9) table: the mesag table
 function Menu:dispatch(job,
     happened, mx, my, button, shiftkey, keycode, clicked, mesag_tbl)
-  if mesag_tbl[1] == k_evme_mn_selected then
+  if happened & k_evmu_mesag ~= 0 and
+      mesag_tbl[1] == k_evme_mn_selected then
     return self:do_selected_mesag_(job,
       happened, mx, my, button, shiftkey, keycode, clicked, mesag_tbl)
   elseif shiftkey ~= 0 and keycode ~= 0 then
