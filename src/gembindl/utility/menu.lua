@@ -4,6 +4,7 @@ local <const> k_aes_global = gempb.const.Pbid.aes_global
 local <const> k_RCache = require("gembindl.utility.rcache")
 local aesdefs = k_RCache.require("gembindl.utility.defs.aesdefs")
 local <const> k_evme_mn_selected = aesdefs.evme_mn_selected
+local <const> k_metn_reverse = aesdefs.metn_reverse
 local <const> k_metn_normal = aesdefs.metn_normal
 local <const> k_grmk_control = aesdefs.grmk_control
 local <const> k_obch_disabled = aesdefs.obch_disabled
@@ -25,12 +26,27 @@ function Menu:new(rsrc, aes, menu_objn, o)
   o.menu_objn_ = menu_objn
   o.menu_tree_addr_ = rsrc:tree_addr(menu_objn)
 
+  -- Keyed by title object number, value is a table for that title
+  -- containing entries for each entry objn with the handler as value
+  -- { entry_objn1 = handler1, entry_objn2 = handler2, ...}
+  -- As evme_mn_selected mesag contains the title object number and
+  -- entry object number, this table of tables is used to obtain the
+  -- corresponding handler.
   o.title_tables_ = {}
+
+  -- Given a control key code, this table is used to look up the title
+  -- and entry object numbers. Keyed by control key code (where 0x1 = A,
+  -- 0x2 = B, ...) i.e. ASCII value minus 64. Value is a table array of
+  -- integers with title object number in upper 16 bits and entry object
+  -- number in lower 16 bits.
   o.ctrl_key_table_ = {}
-  o.alt_key_table_ = {}
-  o.ap_id_ = aes:pb():peek(k_aes_global, 2)
+
+  -- mesag table for do_selected_mesag_ when a keyboard shortcut has
+  -- been pressed. Keys four (title objn) and five (entry objn) are
+  -- filled at dispatch time.
+  local <const> ap_id = aes:pb():peek(k_aes_global, 2)
   o.shortcut_mesag_table_ = {
-    k_evme_mn_selected, o.ap_id_, 0, 0, 0, 0, 0, 0
+    k_evme_mn_selected, ap_id, 0, 0, 0, 0, 0, 0
   }
 
   self.__index = self
@@ -69,9 +85,9 @@ function Menu:add_handler(title_objn, entry_objn, handler)
   -- handler table.
   tt[entry_objn] = handler
 
-  -- Determine keyboard shortcut for the entry_objn by processing the entry's
-  -- text and looking for ^ for control key. Only control shortcuts are
-  -- handled by parsing the menu entry.
+  -- Determine keyboard shortcut for the entry_objn by processing the
+  -- entry's text and looking for ^ for control key. Only control shortcuts
+  -- are handled by parsing the menu entry.
   local <const> rsrc = self.rsrc_
   local <const> entry_spec =
     rsrc:obj_peek_spec(rsrc:tree_obj_offset(self.menu_objn_, entry_objn))
@@ -81,9 +97,7 @@ function Menu:add_handler(title_objn, entry_objn, handler)
     -- Allow shortcuts between A and Z
     if shortcut_byte >= 65 and shortcut_byte <= 90 then
       -- Found a control key shortcut. Add it to the ctrl_key_table
-      self.ctrl_key_table_[shortcut_byte - 64] = {
-        handler, title_objn, entry_objn
-      }
+      self.ctrl_key_table_[shortcut_byte - 64] = title_objn << 16 | entry_objn
     end
   end
 end
@@ -105,23 +119,35 @@ function Menu:dispatch(job,
     return self:do_selected_mesag_(job,
       happened, mx, my, button, shiftkey, keycode, clicked, mesag_tbl)
   elseif shiftkey ~= 0 and keycode ~= 0 then
-    local short_cut_table
+    local object_numbers
     if shiftkey == k_grmk_control then
-      -- Control key pressed
-      short_cut_table = self.ctrl_key_table_[keycode & 0xFF]
+      -- Control key pressed: get the title and entry object numbers
+      object_numbers = self.ctrl_key_table_[keycode & 0xFF]
     end
-    if short_cut_table then
-      -- There is a short cut. Check the entry is not disabled.
+    if object_numbers then
+      -- There is a short cut for the keycode. Before dispatching the
+      -- mesag, the entry must be checked to see if it is disabled.
+      -- Obtain title object number and entry object number
+      local <const> title_objn = object_numbers >> 16
+      local <const> entry_objn = object_numbers & 0xFF
+
+      -- Peek the state of the menu entry
       local <const> rsrc = self.rsrc_
       local <const> entry_offset =
-        rsrc:tree_obj_offset(self.menu_objn_, short_cut_table[3])
+        rsrc:tree_obj_offset(self.menu_objn_, entry_objn)
       local <const> entry_state = rsrc:obj_peek_state(entry_offset)
+      -- If it is not disabled, dispatch the shortcut
       if entry_state & k_obch_disabled == 0 then
         -- Invoke keyboard shortcut handler
-        self.shortcut_mesag_table_[4] = short_cut_table[2]  -- title objn
-        self.shortcut_mesag_table_[5] = short_cut_table[3]  -- entry objn
+        self.shortcut_mesag_table_[4] = title_objn
+        self.shortcut_mesag_table_[5] = entry_objn
 
-        return short_cut_table[1](job,
+        -- Reverse video the title
+        self.aes_:menu_tnormal(
+          self.menu_tree_addr_, title_objn, k_metn_reverse)
+
+        -- Dispatch evme_mn_selected mesag
+        return self:do_selected_mesag_(job,
           happened, mx, my, button, shiftkey, keycode, clicked,
           self.shortcut_mesag_table_)
       end
@@ -145,16 +171,18 @@ function Menu:do_selected_mesag_(job, happened, mx, my, button, shiftkey,
   assert(mesag_tbl[1] == k_evme_mn_selected)
   local <const> title_objn, entry_objn = mesag_tbl[4], mesag_tbl[5]
 
-  -- Normal video the title
-  self.aes_:menu_tnormal(self.menu_tree_addr_, title_objn, k_metn_normal)
-
-  -- Call the handler
+  -- Obtain the handler if one exists for the title and entry
   local <const> tt = self.title_tables_[title_objn]
   local <const> handler = tt and tt[entry_objn]
   if handler then
-    return handler(job, happened, mx, my,
+    -- Run the handler
+    handler(job, happened, mx, my,
       button, shiftkey, keycode, clicked, mesag_tbl)
   end
+
+  -- Normal video the title
+  return self.aes_:menu_tnormal(
+    self.menu_tree_addr_, title_objn, k_metn_normal)
 end
 
 return Menu
