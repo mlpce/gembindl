@@ -10,6 +10,7 @@ local <const> k_validate_path = k_Path.validate_path
 local <const> k_normalize_path = k_Path.normalize_path
 local <const> k_fname_from_path = k_Path.fname_from_path
 local <const> k_fname_split = k_Path.fname_split
+local <const> k_join_path = k_Path.join_path
 
 local <const> PathFind = {}
 
@@ -48,7 +49,7 @@ function PathFind.search_path(rel_path, alt_paths, alt_exts)
   for component in string.gmatch(alt_paths, "([^;]+);*") do
     -- Try open it directly
     local <const> norm_ec, direct_path =
-      k_normalize_path(component .. "\\" .. rel_path)
+      k_normalize_path(k_join_path(component, rel_path))
     if norm_ec == 0 then
       local <const> open_ec, fud <close> = k_Fopen(direct_path, k_o_readonly)
       if open_ec == 0 then
@@ -61,8 +62,8 @@ function PathFind.search_path(rel_path, alt_paths, alt_exts)
     -- Did not find it directly. Try alt_extensions.
     for _, ext in ipairs(alt_exts) do
       local <const> norm_ec, try_path =
-        k_normalize_path(component .. "\\" ..
-          rel_path_dir .. leading .. "." .. ext)
+        k_normalize_path(k_join_path(component,
+          rel_path_dir .. leading .. "." .. ext))
       if norm_ec == 0 then
         local <const> open_ec2, fud2 <close> = k_Fopen(try_path, k_o_readonly)
         if open_ec2 == 0 then
