@@ -93,8 +93,12 @@ function Luacc.compile(src_path, dst_path, recursive, strip, fn)
     assert(dst_dta:attr() & k_dir_attribute ~= 0)
   end
 
-  -- Find the compiler path
-  local luac_path = k_PathFind.find_program("LUAC.TTP")
+  -- Find the compiler path. Search for LUAC.TTP in the current working
+  -- directory and in the directories specified by the GEMDOS environment
+  -- PATH value.
+  local <const> luac_path =
+    k_PathFind.search_path("LUAC.TTP", k_PathFind.cwd_env_path())
+
   if luac_path == nil then
     return -1
   end
