@@ -112,30 +112,39 @@ function Luacc.compile(src_path, dst_path, recursive, strip, fn)
     local dst_rel_path = k_Path.join_path(dst_path, src_rel_path)
     local ec = 0
 
-    -- Create destination directories if they do not exist
-    for _, dta in ipairs(dirs) do
-      local <const> src_sub_path = k_Path.join_path(path, dta:name())
-      local <const> dst_sub_path = k_Path.join_path(dst_rel_path, dta:name())
+    -- If recursion is enabled create destination directories if they do
+    -- not exist
+    if recursive then
+      for _, dta in ipairs(dirs) do
+        local <const> src_sub_path = k_Path.join_path(path, dta:name())
+        local <const> dst_sub_path = k_Path.join_path(dst_rel_path, dta:name())
 
-      -- Make the destination directory if it doesn't exists
-      ec = k_Fsfirst(dst_sub_path, k_dir_attribute)
-      if ec == k_EFILNF then
-        ec = fn("dcreate", src_sub_path, dst_sub_path)
-        assert(type(ec) == "number")
-        if ec ~= 0 then
-          break
-        end
-        ec = k_Dcreate(dst_sub_path)
-        if ec < 0 then
-          -- Failed to create directory
-          break
+        -- Make the destination directory if it doesn't exists
+        ec = k_Fsfirst(dst_sub_path, k_dir_attribute)
+        if ec == 0 then
+          ec = fn("dfound", src_sub_path, dst_sub_path)
+          assert(type(ec) == "number")
+          if ec ~= 0 then
+            break
+          end
+        elseif ec == k_EFILNF then
+          ec = fn("dcreate", src_sub_path, dst_sub_path)
+          assert(type(ec) == "number")
+          if ec ~= 0 then
+            break
+          end
+          ec = k_Dcreate(dst_sub_path)
+          if ec < 0 then
+            -- Failed to create directory
+            break
+          end
         end
       end
-    end
 
-    if ec ~= 0 then
-      -- Error while creating destination directories
-      return ec
+      if ec ~= 0 then
+        -- Error while creating destination directories
+        return ec
+      end
     end
 
     -- Compile the Lua code to the destination directory
