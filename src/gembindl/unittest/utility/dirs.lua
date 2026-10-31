@@ -52,13 +52,13 @@ end
 assert(nchecked == 4)
 
 -- Find the .ASC file
-local found = PathFind.find_file("TWO.ASC", "utility\\testdst")
+local found = PathFind.search_path("TWO.ASC", "utility\\testdst")
 assert(found)
 gemdos.Cconws("found: " .. found .. "\r\n")
-found = PathFind.find_file("TWO", "utility\\testdst", { "ASC" } )
+found = PathFind.search_path("TWO", "utility\\testdst", { "ASC" } )
 assert(found)
 gemdos.Cconws("found: " .. found .. "\r\n")
-found = PathFind.find_file("utility\\testdst\\two", nil, { "ASC" } )
+found = PathFind.search_path("utility\\testdst\\two", nil, { "ASC" } )
 assert(found)
 gemdos.Cconws("found: " .. found .. "\r\n")
 
