@@ -112,35 +112,40 @@ function DirCopy.dir_copy(src_path, dst_path, wildcard, recursive,
     local src_rel_path = string.sub(path, #src_path + 1)
     local dst_rel_path = k_join_path(dst_path, src_rel_path)
     local ec = 0
-    for _, dta in ipairs(dirs) do
-      local <const> src_sub_path = k_join_path(path, dta:name())
-      local <const> dst_sub_path = k_join_path(dst_rel_path, dta:name())
 
-      -- Make the destination directory if it doesn't exists
-      ec = k_Fsfirst(dst_sub_path, k_dir_attribute)
-      if ec == 0 then
-        ec = fn("dfound", src_sub_path, dst_sub_path, 0, 0, 0)
-        assert(type(ec) == "number")
-        if ec ~= 0 then
-          break
-        end
-      elseif ec == k_EFILNF then
-        ec = fn("dcreate", src_sub_path, dst_sub_path, 0, 0, 0)
-        assert(type(ec) == "number")
-        if ec ~= 0 then
-          break
-        end
-        ec = k_Dcreate(dst_sub_path)
-        if ec < 0 then
-          -- Failed to create directory
-          break
+    -- If recursion is enabled create destination directories if they do
+    -- not exist
+    if recursive then
+      for _, dta in ipairs(dirs) do
+        local <const> src_sub_path = k_join_path(path, dta:name())
+        local <const> dst_sub_path = k_join_path(dst_rel_path, dta:name())
+
+        -- Make the destination directory if it doesn't exists
+        ec = k_Fsfirst(dst_sub_path, k_dir_attribute)
+        if ec == 0 then
+          ec = fn("dfound", src_sub_path, dst_sub_path, 0, 0, 0)
+          assert(type(ec) == "number")
+          if ec ~= 0 then
+            break
+          end
+        elseif ec == k_EFILNF then
+          ec = fn("dcreate", src_sub_path, dst_sub_path, 0, 0, 0)
+          assert(type(ec) == "number")
+          if ec ~= 0 then
+            break
+          end
+          ec = k_Dcreate(dst_sub_path)
+          if ec < 0 then
+            -- Failed to create directory
+            break
+          end
         end
       end
-    end
 
-    if ec ~= 0 then
-      -- Error while creating destination directories
-      return ec
+      if ec ~= 0 then
+        -- Error while creating destination directories
+        return ec
+      end
     end
 
     -- Copy the files to the destination directory
