@@ -72,14 +72,14 @@ function FileCopy.file_copy(src_file, dst_file, preserve_ts, fn, premud)
   assert(premud == nil or type(premud) == "userdata")
 
   -- Do not allow copying from volume or directory items
-  local ec_src_attr <const> =
+  local <const> ec_src_attr =
     check_attr(src_file, all_attr ~ (k_a_volume | k_a_dir))
   if ec_src_attr < 0 then
     return ec_src_attr, "src_attr"
   end
 
   -- Do not allow copying to volume, directory or readonly items
-  local ec_dst_attr <const> =
+  local <const> ec_dst_attr =
     check_attr(dst_file, all_attr ~ (k_a_volume | k_a_dir | k_a_readonly))
   if ec_dst_attr < 0 and ec_dst_attr ~= k_EFILNF then  -- file not found is ok
     return ec_dst_attr, "dst_attr"
@@ -92,7 +92,8 @@ function FileCopy.file_copy(src_file, dst_file, preserve_ts, fn, premud)
   end
 
   -- Open the destination file
-  local <const> ec_open_dst, dst_fud <close> = k_Fcreate(dst_file, ec_src_attr)
+  local <const> ec_open_dst, dst_fud <close> =
+    k_Fcreate(dst_file, ec_src_attr)
   if ec_open_dst < 0 then
     return ec_open_dst, "dst_create"
   end
@@ -101,87 +102,86 @@ function FileCopy.file_copy(src_file, dst_file, preserve_ts, fn, premud)
   local <const> file_size = dta_sfirst:length()
 
   -- If file_size is zero then nothing needs to be copied
-  if file_size == 0 then
-    return 0, ""
-  end
-
-  -- Allocate memory for the data copy if premud was nil
-  local alloc_mud
-  if not premud then
-     -- Work out alloc size
-    local alloc_size = file_size
-    if alloc_size > k_max_alloc_size then
-      alloc_size = k_max_alloc_size
-    end
-
-    local ec_alloc_bytes
-    ec_alloc_bytes, alloc_mud = k_allocm(alloc_size)
-    if ec_alloc_bytes < 0 then
-      return ec_alloc_bytes, "alloc"
-    end
-  end
-
-  -- Closer for the alloc_mud
-  local <close> alloc_mud_closer = alloc_mud
-
-  -- Use the actual mud
-  local <const> mud = alloc_mud or premud
-
-  -- Open the src file
-  local <const> ec_open_src, src_fud <close> = k_Fopen(src_file, k_o_readonly)
-  if ec_open_src < 0 then
-    return ec_open_src, "src_open"
-  end
-
-  -- Perform the copy
-  local total_bytes_read = 0
-  local total_bytes_written = 0
   local result = 0
-  local error_msg
-  repeat
-    -- Read data
-    local <const> bytes_read = src_fud:readm(mud, 0, mud:size())
-    if bytes_read < 0 then
-      result = bytes_read
-      error_msg = "src_read"
-      break
-    elseif bytes_read > 0 then
-      -- Call fn with read progress
-      total_bytes_read = total_bytes_read + bytes_read
-      result = fn(file_size, total_bytes_read, total_bytes_written)
-      if result ~= 0 then
-        error_msg = "fn_read"
-        break
+  local error_msg = ""
+  if file_size > 0 then
+    -- Allocate memory for the data copy if premud was nil
+    local alloc_mud
+    if not premud then
+       -- Work out alloc size
+      local alloc_size = file_size
+      if alloc_size > k_max_alloc_size then
+        alloc_size = k_max_alloc_size
+      end
+
+      local ec_alloc_bytes
+      ec_alloc_bytes, alloc_mud = k_allocm(alloc_size)
+      if ec_alloc_bytes < 0 then
+        return ec_alloc_bytes, "alloc"
       end
     end
 
-    -- Write data
-    local <const> bytes_written = dst_fud:writem(mud, 0, bytes_read)
-    if bytes_written < 0 then
-      result = bytes_written
-      error_msg = "src_write"
-      break
-    elseif bytes_written > 0 then
-      -- Call fn with write progress
-      total_bytes_written = total_bytes_written + bytes_written
-      result = fn(file_size, total_bytes_read, total_bytes_written)
-      if result ~= 0 then
-        error_msg = "fn_write"
+    -- Closer for the alloc_mud
+    local <close> alloc_mud_closer = alloc_mud
+
+    -- Use the actual mud
+    local <const> mud = alloc_mud or premud
+
+    -- Open the src file
+    local <const> ec_open_src, src_fud <close> =
+      k_Fopen(src_file, k_o_readonly)
+    if ec_open_src < 0 then
+      return ec_open_src, "src_open"
+    end
+
+    -- Perform the copy
+    local total_bytes_read = 0
+    local total_bytes_written = 0
+    repeat
+      -- Read data
+      local <const> bytes_read = src_fud:readm(mud, 0, mud:size())
+      if bytes_read < 0 then
+        result = bytes_read
+        error_msg = "src_read"
+        break
+      elseif bytes_read > 0 then
+        -- Call fn with read progress
+        total_bytes_read = total_bytes_read + bytes_read
+        result = fn(file_size, total_bytes_read, total_bytes_written)
+        if result ~= 0 then
+          error_msg = "fn_read"
+          break
+        end
+      end
+
+      -- Write data
+      local <const> bytes_written = dst_fud:writem(mud, 0, bytes_read)
+      if bytes_written < 0 then
+        result = bytes_written
+        error_msg = "src_write"
+        break
+      elseif bytes_written > 0 then
+        -- Call fn with write progress
+        total_bytes_written = total_bytes_written + bytes_written
+        result = fn(file_size, total_bytes_read, total_bytes_written)
+        if result ~= 0 then
+          error_msg = "fn_write"
+          break
+        end
+      end
+
+      -- Check if write was short
+      if bytes_written < bytes_read then
+        result = -1
+        error_msg = "dst_full"
+
+        -- Delete the partial destination file
+        dst_fud:close()
+        k_Fdelete(dst_file)
         break
       end
-    end
-
-    -- Check if write was short
-    if bytes_written < bytes_read then
-      result = -1
-      error_msg = "dst_full"
-
-      -- Delete the partial destination file
-      dst_fud:close()
-      k_Fdelete(dst_file)
-      break
-    end
-  until bytes_read == 0
+    until bytes_read == 0
+  end
 
   -- Optionally preserve the timestamp
   if result == 0 and preserve_ts then
@@ -192,7 +192,7 @@ function FileCopy.file_copy(src_file, dst_file, preserve_ts, fn, premud)
     end
   end
 
-  return result, error_msg or ""
+  return result, error_msg
 end
 
 return FileCopy
