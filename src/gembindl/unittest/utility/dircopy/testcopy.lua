@@ -112,8 +112,7 @@ until new_s ~= s
 -- Copy files from testdir to testdst, recursive and preserving
 -- timestamps
 gemdos.Cconws("Copying files (recursive, preservets)\r\n")
-local ec =
-  k_DirCopy.dir_copy(src_path, dst_path, "*.*", true, true)
+local ec = k_DirCopy.dir_copy(src_path, dst_path, "*.*", true, true)
 assert(ec == 0)
 
 -- Check copied files
@@ -166,8 +165,7 @@ k_DirScan.dir_scan(dst_path, "*.*", true, ascending_del)
 -- Copy again, without recursion and without preserving timestamp
 -- timestamps
 gemdos.Cconws("Copying files (non-rec, no-preservets)\r\n")
-local ec =
-  k_DirCopy.dir_copy(src_path, dst_path, "*.*", false, false)
+ec = k_DirCopy.dir_copy(src_path, dst_path, "*.*", false, false)
 assert(ec == 0)
 
 -- File in subdirectory must not have been copied
@@ -197,5 +195,26 @@ for k,v in ipairs(sources) do
   end
 end
 
--- Delete what was copied
+-- Delete everything in the destination directory
+k_DirScan.dir_scan(dst_path, "*.*", true, ascending_del)
+
+-- Copy again, using wildcard *.BIN, with recursion and preserving timestamp
+gemdos.Cconws("Copying files (*.BIN, recursive, preservets)\r\n")
+ec = k_DirCopy.dir_copy(src_path, dst_path, "*.BIN", true, true)
+assert(ec == 0)
+
+-- Only BIG.BIN must have been copied so check there is only one file
+local nfiles = 0
+ec = k_DirScan.dir_scan(dst_path, "*.*", true,
+  function (path, descending, dirs, files)
+    if descending then nfiles = nfiles + #files end
+    return 0
+  end)
+
+gemdos.Cconws("Copied " .. nfiles .. " files\r\n")
+assert(nfiles == 1)
+
+-- Check the copied file was BIG.BIN
+assert(gemdos.Fattrib(k_Path.join_path(dst_path, "subdir\\big.bin"), 0) == 0)
+
 cleanup()
