@@ -37,15 +37,17 @@ end
 --   2) string: dst path
 --   3) boolean: true to enable recursion
 --   4) boolean: true to enable stripping
---   5) function: function to call before each file is compiled
+--   5) string: The wildcard, e.g. "*.LUA", "FILE.LUA"
+--   6) function: function to call before each file is compiled
 --   NOTE: See default_fn for an example function for fn parameter.
 -- Returns
 --   1) integer: 0 on success, non-zero on failure
-function Luacc.compile(src_path, dst_path, recursive, strip, fn)
+function Luacc.compile(src_path, dst_path, recursive, strip, wildcard, fn)
   src_path = src_path or "."
   dst_path = dst_path or "."
   recursive = recursive or false
   if strip == nil then strip = true end
+  wildcard = wildcard or "*.LUA"
   fn = fn or default_fn
 
   local <const> params = strip and { "-s", "-o", false, false } or
@@ -172,7 +174,7 @@ function Luacc.compile(src_path, dst_path, recursive, strip, fn)
     return ec
   end
 
-  return k_DirScan.dir_scan(src_path, "*.LUA", recursive, proc_dir)
+  return k_DirScan.dir_scan(src_path, wildcard, recursive, proc_dir)
 end
 
 return Luacc

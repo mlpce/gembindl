@@ -133,11 +133,19 @@ gemdos.Cconws("test_name exists\r\n")
 cleanup()
 prepare()
 
--- Now using the badsrc path. badsrc/subdir/filebad.lua contains an undeclared
--- variable and will fail to compile.
--- Compile badsrc_path to baddst_path with recursion and stripping enabled
-gemdos.Cconws("The following compilation must fail for filebad.lua:\r\n")
+-- Now using the badsrc path.
+-- badsrc/file1.lua and badsrc/file2.lua must compile using default wildcard
+-- of *.LUA
+gemdos.Cconws(
+  "The following compilation must succeed for file1.lua, file2.lua:\r\n")
 local ec = k_Luacc.compile(badsrc_path, baddst_path, true, true)
+assert(ec == 0)
+
+-- badsrc/subdir/filebad.bad contains an undeclared variable and will fail to
+-- compile. Compile badsrc_path to baddst_path with recursion and stripping
+-- enabled with wildcard *.BAD
+gemdos.Cconws("The following compilation must fail for filebad.bad:\r\n")
+local ec = k_Luacc.compile(badsrc_path, baddst_path, true, true, "*.BAD")
 -- Compile must return a failure code because of filebad.lua
 assert(ec ~= 0)
 
@@ -151,9 +159,9 @@ end
 
 -- The destination filebad.lua must not have been generated
 ec = k_Pexec0(luac_path,
-  {"-p", k_Path.join_path(baddst_path, "subdir\\filebad.lua")})
+  {"-p", k_Path.join_path(baddst_path, "subdir\\filebad.bad")})
 assert(ec ~= 0)
-gemdos.Cconws("load not ok (expected): subdir\\filebad.lua\r\n")
+gemdos.Cconws("load not ok (expected): subdir\\filebad.bad\r\n")
 
 -- Additionally FILE1.LUA must not contain the string test_name because the
 -- bytecode was stripped.
