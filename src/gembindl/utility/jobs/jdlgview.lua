@@ -109,14 +109,13 @@ end
 --   1) table: wind: the Wind instance
 --   2) boolean: override: true pre-modal, false post-modal
 function JDlgView:view_modal_override(wind, override)
-  -- View only displays a cursor if it is the top window
-  if not self.topped_ or
-      self.wind_:top_handle() ~= self.wind_:handle() then
-    return
+  if override then
+    -- Undraw edit cursor immediately
+    return self:view_predraw(wind)
+  else
+    -- Redraw edit cursor (via redraw message)
+    return self:cursor_enable_(wind, true)
   end
-
-  -- Cursor is disabled when overridden
-  return self:cursor_enable_(self.wind_, not override)
 end
 
 -- view_send_redraw. Send redraw message for view
@@ -125,6 +124,7 @@ function JDlgView:view_send_redraw()
     return
   end
 
+  self.cursor_drawn_ = false
   return self.wind_:send_redraw(self.work_x_, self.work_y_,
     self.work_width_, self.work_height_)
 end
@@ -351,17 +351,6 @@ function JDlgView:view_draw(wind, x, y, w, h)
     k_obdr_root, k_obdr_max_depth,
     x, y, w, h)
   assert(status > 0)
-
-  -- Is this window top window?
-  if wind:top_handle() == wind:handle() then
-    -- If a desk accessory just closed (causing this redraw)
-    -- then fix up self.topped_
-    self.topped_ = true
-
-    -- Initialise form event processing. This will draw the edit box cursor
-    -- if self.edit_objn_ is not zero.
-    return self.form_evnt_:init(self.dialog_objn_, self.edit_objn_)
-  end
 end
 
 -- view_open. Called by Wind when the window has been opened
@@ -375,12 +364,29 @@ end
 -- Inputs:
 --   1) table: wind: the Wind instance
 function JDlgView:view_predraw(wind)
+  if self.cursor_drawn_ and
+      wind:top_handle() == wind:handle() then
+    -- Undraw the cursor by terminating form event processing
+    self.cursor_drawn_ = false
+    return self.form_evnt_:term()
+  end
 end
 
 -- view_predraw. Called by Wind after a window is drawn
 -- Inputs:
 --   1) table: wind: the Wind instance
 function JDlgView:view_postdraw(wind)
+  -- Is this window top window?
+  if wind:top_handle() == wind:handle() then
+    -- If a desk accessory just closed (causing this redraw)
+    -- then fix up self.topped_
+    self.topped_ = true
+
+    -- Initialise form event processing. This will draw the edit box
+    -- cursor if self.edit_objn_ is not zero.
+    self.cursor_drawn_ = true
+    return self.form_evnt_:init(self.dialog_objn_, self.edit_objn_)
+  end
 end
 
 -- view_workxywh. Called by Wind when the work area is determined.
@@ -412,17 +418,15 @@ end
 --   1) table: wind: the Wind instance
 --   2) boolean: is_topped: true if view's window was topped
 function JDlgView:view_topped(wind, is_topped)
-  if self.topped_ then
-    if not is_topped and
-        wind:top_handle() == wind:handle() then
-      -- View is no longer the top window
-      self:cursor_enable_(wind, false)
-    end
-  elseif is_topped then
-    -- View is becoming the top window
-    self:cursor_enable_(wind, true)
-  end
+  local <const> prev_topped = self.topped_
   self.topped_ = is_topped
+  if is_topped then
+    -- View is becoming the top window
+    return self:cursor_enable_(wind, true)
+  elseif prev_topped then
+    -- View is no longer the top window
+    return self:cursor_enable_(wind, false)
+  end
 end
 
 -- view_untopped. Called by Wind for untopped window
@@ -435,9 +439,9 @@ end
 function JDlgView:cursor_enable_(wind, is_enabled)
   if is_enabled then
     if self.edit_objn_ ~= 0 then
-      -- Sending a full redraw ensures the edit box cursor is redrawn
-      -- correctly even if the window  was only partially damaged by
-      -- e.g. the file selector. AES will merge the dirty rectangle.
+      -- Sending a redraw ensures the edit box cursor is redrawn
+      -- correctly even if the window was only partially damaged by e.g.
+      -- the file selector. AES will merge the dirty rectangle.
       return self:view_send_redraw()
     else
       -- There is no edit box. In this case the edit box cursor does
@@ -446,9 +450,16 @@ function JDlgView:cursor_enable_(wind, is_enabled)
       return self.form_evnt_:init(self.dialog_objn_, self.edit_objn_)
     end
   else
-    -- Terminate form event processing. This will undraw
-    -- the edit box cursor if it was enabled.
-    return self.form_evnt_:term()
+    if self.edit_objn_ ~= 0 then
+      -- There is an edit object. Sending a redraw ensures the edit box
+      -- cursor is removed correctly.
+      return self:view_send_redraw()
+    else
+      -- There is no edit box. In this case the edit box cursor does
+      -- not need removing and form_evnt processing can be terminated
+      -- directly.
+      return self.form_evnt_:term()
+    end
   end
 end
 
