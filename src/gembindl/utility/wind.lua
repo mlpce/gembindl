@@ -611,8 +611,12 @@ function Wind:do_redraw_mesag_(mesag)
   aes:graf_mouse(k_grmo_m_off)
   aes:wind_update(k_wiup_beg_update)
 
-  -- First window rectangle
   local <const> view = self.view_
+
+  -- Call view_predraw
+  view:view_predraw(self)
+
+  -- First window rectangle
   local <const> rcintersect = self.rcintersect
   local status, x, y, w, h =
     aes:wind_get(wi_handle, k_wige_firstxywh)
@@ -635,6 +639,9 @@ function Wind:do_redraw_mesag_(mesag)
     status, x, y, w, h =
       aes:wind_get(wi_handle, k_wige_nextxywh)
   end
+
+  -- Call view_postdraw
+  view:view_postdraw(self)
 
   -- End update and turn mouse on
   aes:wind_update(k_wiup_end_update)

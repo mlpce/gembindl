@@ -371,6 +371,18 @@ function JDlgView:view_open(wind)
   self.window_open_ = true
 end
 
+-- view_predraw. Called by Wind before a window is drawn
+-- Inputs:
+--   1) table: wind: the Wind instance
+function JDlgView:view_predraw(wind)
+end
+
+-- view_predraw. Called by Wind after a window is drawn
+-- Inputs:
+--   1) table: wind: the Wind instance
+function JDlgView:view_postdraw(wind)
+end
+
 -- view_workxywh. Called by Wind when the work area is determined.
 -- Updates state and pokes the new position into the resource.
 -- Inputs:

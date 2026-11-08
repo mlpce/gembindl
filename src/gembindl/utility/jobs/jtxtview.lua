@@ -375,6 +375,18 @@ function JTxtView:view_open(wind)
   self.window_open_ = true
 end
 
+-- view_predraw. Called by Wind before a window is drawn
+-- Inputs:
+--   1) table: wind: the Wind instance
+function JTxtView:view_predraw(wind)
+end
+
+-- view_predraw. Called by Wind after a window is drawn
+-- Inputs:
+--   1) table: wind: the Wind instance
+function JTxtView:view_postdraw(wind)
+end
+
 -- view_workxywh. Called by Wind, or JTxtView, when the window
 -- work area has changed. Updates state and calls into Wind to
 -- adjust sliders.
