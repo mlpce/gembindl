@@ -389,6 +389,25 @@ function JDlgView:view_postdraw(wind)
   end
 end
 
+-- view_preposition. Called by Wind before a window is positioned
+-- Inputs:
+--   1) table: wind: the Wind instance
+--   2) string: operation: preposition operation
+--   3) integer: controls: the window controls
+--   4) integer: px: the window x coordinate
+--   5) integer: py: the window y coordinate
+--   6) integer: pw: the window width
+--   7) integer: ph: the window height
+-- Returns:
+--   1) integer: px: the window x coordinate
+--   2) integer: py: the window y coordinate
+--   3) integer: pw: the window width
+--   4) integer: ph: the window height
+function JDlgView:view_preposition(wind,
+    operation, controls, px, py, pw, ph)
+  return wind:rcalign(controls, px, py, pw, ph)
+end
+
 -- view_workxywh. Called by Wind when the work area is determined.
 -- Updates state and pokes the new position into the resource.
 -- Inputs:

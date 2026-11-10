@@ -130,16 +130,16 @@ end
 --   3) integer: y
 --   4) integer: w
 --   5) integer: h
-function Wind:rcalign_(x, y, w, h)
+function Wind:rcalign(controls, x, y, w, h)
   local astatus, ax, ay, aw, ah =
-    self.aes_:wind_calc(k_wica_work, self.controls_,
+    self.aes_:wind_calc(k_wica_work, controls,
       x, y, w, h)
   assert(astatus > 0)
 
   ax = (ax + 7) & (-16)
 
   astatus, ax, ay, aw, ah =
-    self.aes_:wind_calc(k_wica_border, self.controls_,
+    self.aes_:wind_calc(k_wica_border, controls,
       ax, ay, aw, ah)
   assert(astatus > 0)
 
@@ -273,7 +273,11 @@ function Wind:open(x, y, w, h)
     top_wind_view:view_untopped(top_wind)
   end
 
-  local <const> ax, ay, aw, ah = self:rcalign_(x, y, w, h)
+  -- Call preposition and use returned coordinates
+  local <const> ax, ay, aw, ah  =
+    self.view_:view_preposition(
+      self, "open", self.controls_, x, y, w, h)
+
   local <const> opened =
     self.aes_:wind_open(self.wi_handle_, ax, ay, aw, ah) > 0
   if opened then
@@ -528,17 +532,24 @@ function Wind:do_fulled_mesag_(mesag)
     return
   end
 
-  -- Get current, previous and full coordinates
+  -- Get current and full coordinates
   local <const> cstatus, cx, cy, cw, ch =
     self.aes_:wind_get(wi_handle, k_wige_currxywh)
-  local <const> pstatus, px, py, pw, ph =
-    self.aes_:wind_get(wi_handle, k_wige_prevxywh)
   local <const> fstatus, fx, fy, fw, fh =
     self.aes_:wind_get(wi_handle, k_wige_fullxywh)
-  assert(cstatus > 0 and pstatus > 0 and fstatus > 0)
+  assert(cstatus > 0 and fstatus > 0)
 
   if self.rcequal(cx, cy, cw, ch, fx, fy, fw, fh) then
     -- Currently full so shrink to previous
+    local pstatus <const>, px, py, pw, ph =
+      self.aes_:wind_get(wi_handle, k_wige_prevxywh)
+    assert(pstatus > 0)
+
+    -- Call preposition and use returned coordinates
+    px, py, pw, ph = self.view_:view_preposition(self,
+      "shrink", self.controls_, px, py, pw, ph)
+
+    -- Shrink the window
     self.aes_:graf_shrinkbox(px, py, pw, ph, fx, fy, fw, fh)
     self.aes_:wind_set(wi_handle, k_wise_currxywh, px, py, pw, ph)
   else
@@ -561,9 +572,14 @@ function Wind:do_sized_mesag_(mesag)
     return
   end
 
+  -- Call preposition and use returned coordinates
+  local <const> ax, ay, aw, ah  =
+    self.view_:view_preposition(self, "sized", self.controls_,
+      mesag[5], mesag[6], mesag[7], mesag[8])
+
   -- Set the window size
   self.aes_:wind_set(wi_handle, k_wise_currxywh,
-    mesag[5], mesag[6], mesag[7], mesag[8])
+    ax, ay, aw, ah)
 
   -- Notify view of workxywh
   local <const> wstatus, wx, wy, ww, wh =
@@ -579,8 +595,12 @@ function Wind:do_moved_mesag_(mesag)
     return
   end
 
-  local <const> ax, ay, aw, ah =
-    self:rcalign_(mesag[5], mesag[6], mesag[7], mesag[8])
+  -- Call preposition and use returned coordinates
+  local <const> ax, ay, aw, ah  =
+    self.view_:view_preposition(self, "moved", self.controls_,
+      mesag[5], mesag[6], mesag[7], mesag[8])
+
+  -- Set the window size
   self.aes_:wind_set(wi_handle,
     k_wise_currxywh, ax, ay, aw, ah)
 
