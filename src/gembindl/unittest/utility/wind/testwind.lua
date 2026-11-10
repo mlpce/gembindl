@@ -56,12 +56,29 @@ function test_view:view_close(wind)
   self.res.open = false
 end
 
-function test_view:view_draw(wind, x, y, w, h)
+function test_view:view_predraw(wind)
   self.res.wind = wind
+  self.res.predraw = true
+end
+
+function test_view:view_draw(wind, x, y, w, h)
+  -- view_predraw must already have run
+  assert(self.res.wind == wind)
+  assert(self.res.predraw == true)
   self.res.drawx = x
   self.res.drawy = y
   self.res.draww = w
   self.res.drawh = h
+end
+
+function test_view:view_postdraw(wind)
+  -- view_predraw must have already run
+  assert(self.res.wind == wind)
+  assert(self.res.predraw == true)
+  -- view_draw must have already run
+  assert(self.res.drawx and self.res.drawy and
+    self.res.draww and self.res.drawh)
+  self.res.postdraw = true
 end
 
 function test_view:view_open(wind)
@@ -301,6 +318,8 @@ assert(view1.res.drawx == 16)
 assert(view1.res.drawy == wy)
 assert(view1.res.draww == ww)
 assert(view1.res.drawh == wh)
+assert(view1.res.predraw == true)
+assert(view1.res.postdraw == true)
 view1:clear_results()
 
 -- Dispatch pageup mesag.
