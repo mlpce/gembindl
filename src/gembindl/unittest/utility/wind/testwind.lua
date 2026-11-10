@@ -86,6 +86,20 @@ function test_view:view_open(wind)
   self.res.open = true
 end
 
+function test_view:view_preposition(wind,
+    operation, controls, x, y, w, h)
+  x, y, w, y = wind:rcalign(controls, x, y, w, h)
+  self.res.wind = wind
+  self.res.operation = operation
+  self.res.controls = controls
+  self.res.x = x
+  self.res.y = y
+  self.res.w = w
+  self.res.h = h
+
+  return x, y, w, h
+end
+
 function test_view:view_sized(wind, wx, wy, ww, wh)
   self.res.wind = wind
   self.res.workwx = wx
@@ -202,9 +216,20 @@ wind1:set_info("Wind info")
 local opened = wind1:open(deskx, desky, deskw, deskh)
 assert(opened)
 
+-- the view work rectangle matches work area of window
+local wstatus, wx, wy, ww, wh =
+  aes:wind_get(wind1:handle(), k_wige_workxywh)
+assert(wstatus > 0)
+
 -- Check view notification
 assert(view1.res.wind == wind1)
 assert(view1.res.open)
+assert(view1.res.operation == "open")
+assert(view1.res.controls == controls)
+assert(view1.res.workwx == wx)
+assert(view1.res.workwy == wy)
+assert(view1.res.workww == ww)
+assert(view1.res.workwh == wh)
 view1:clear_results()
 
 -- Check top handle. Is must be window just opened.
@@ -253,9 +278,11 @@ local mesag = { k_evme_wm_sized, ap_id, 0, wind1:handle(),
 wind1:dispatch(mesag)
 assert(view1.res.wind == wind1)
 -- the view work rectangle matches work area of window
-local wstatus, wx, wy, ww, wh =
+wstatus, wx, wy, ww, wh =
   aes:wind_get(wind1:handle(), k_wige_workxywh)
 assert(wstatus > 0)
+assert(view1.res.operation == "sized")
+assert(view1.res.controls == controls)
 assert(view1.res.workwx == wx)
 assert(view1.res.workwy == wy)
 assert(view1.res.workww == ww)
@@ -263,14 +290,16 @@ assert(view1.res.workwh == wh)
 view1:clear_results()
 
 -- Dispatch moved mesag. The view must be notified of the changed work
--- area. Wind aligns the window work area by 16 pixels, so even though
--- the window is moved to deskx + 18 here the view work area x coordinate
--- is set to 16.
+-- area. view_preposition aligns the window work area by 16 pixels using
+-- Wind:rcalign, so even though the window is moved to deskx + 18 here
+-- the view work area x coordinate is set to 16.
 mesag = { k_evme_wm_moved, ap_id, 0, wind1:handle(),
   deskx + 18, desky, deskw // 2, deskh // 2 }
 wind1:dispatch(mesag)
 -- the view work area x coordinate is aligned on 16
 assert(view1.res.wind == wind1)
+assert(view1.res.operation == "moved")
+assert(view1.res.controls == controls)
 assert(view1.res.workwx == 16)
 assert(view1.res.workwy == wy)
 assert(view1.res.workww == ww)
@@ -278,9 +307,9 @@ assert(view1.res.workwh == wh)
 view1:clear_results()
 
 -- Dispatch fulled mesag. The view must be notified of the changed work
--- area. Note that although Wind aligns the work area by 16 pixels, it
--- doesn't in this case because that would mean the left hand border x
--- coordinate of the window would be less than zero.
+-- area. Although view_preposition aligns the work area by 16 pixels using
+-- Wind:rcalign, it is not aligned in this case because that would mean
+-- the left hand border x coordinate of the window would be less than zero.
 mesag = { k_evme_wm_fulled, ap_id, 0, wind1:handle(), 0, 0, 0, 0 }
 wind1:dispatch(mesag)
 local wstatus, cx, cy, cw, ch =
@@ -300,6 +329,8 @@ view1:clear_results()
 mesag = { k_evme_wm_fulled, ap_id, 0, wind1:handle(), 0, 0, 0, 0 }
 wind1:dispatch(mesag)
 assert(view1.res.wind == wind1)
+assert(view1.res.operation == "shrink")
+assert(view1.res.controls == controls)
 assert(view1.res.workwx == 16)
 assert(view1.res.workwy == wy)
 assert(view1.res.workww == ww)
@@ -460,8 +491,18 @@ view2:clear_results()
 local opened = wind2:open(deskx, desky, deskw, deskh)
 assert(opened)
 -- Check view notification
+-- the view work rectangle matches work area of window
+wstatus, wx, wy, ww, wh =
+  aes:wind_get(wind2:handle(), k_wige_workxywh)
+assert(wstatus > 0)
 assert(view2.res.wind == wind2)
 assert(view2.res.open)
+assert(view2.res.operation == "open")
+assert(view2.res.controls == controls)
+assert(view2.res.workwx == wx)
+assert(view2.res.workwy == wy)
+assert(view2.res.workww == ww)
+assert(view2.res.workwh == wh)
 view2:clear_results()
 
 -- Send topped mesag to each Wind, topping wind1. Each Wind must
