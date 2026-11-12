@@ -26,6 +26,8 @@ local <const> k_grmo_m_on = aesdefs.grmo_m_on
 local <const> k_wiup_beg_update = aesdefs.wiup_beg_update
 local <const> k_wiup_end_update = aesdefs.wiup_end_update
 local <const> k_evmu_mesag = aesdefs.evmu_mesag
+local <const> k_wica_work = aesdefs.wica_work
+local <const> k_wica_border = aesdefs.wica_border
 
 local <const> k_scli_off = vdidefs.scli_off
 local <const> k_scli_on = vdidefs.scli_on
@@ -403,7 +405,36 @@ end
 --   4) integer: ph: the window height
 function JTxtView:view_preposition(wind,
     operation, controls, px, py, pw, ph)
-  return wind:rcalign(controls, px, py, pw, ph)
+  local <const> aes = self.aes_
+  local astatus, ax, ay, aw, ah =
+    aes:wind_calc(k_wica_work, controls, px, py, pw, ph)
+  assert(astatus > 0)
+
+  -- fulled-noprev means the prev rectangle postioned same as full
+  -- rectangle, so a new one needs to be chosen. 16 pixels are
+  -- added onto the x-coordinate and 16 taken off the width to make
+  -- a smaller rectangle.
+  if operation == "fulled-noprev" then
+    ax = ax + 16
+    aw = aw - 16
+  end
+
+  -- Align x coordinate
+  ax = (ax + 7) & (-16)
+
+  -- Align width and height according to cell width and height
+  local <const> wcel, hcel = self.wcel_, self.hcel_
+  aw = aw // wcel
+  aw = aw * wcel
+  ah = ah // hcel
+  ah = ah * hcel
+
+  astatus, ax, ay, aw, ah =
+    aes:wind_calc(k_wica_border, controls, ax, ay, aw, ah)
+  assert(astatus > 0)
+
+  if ax < 0 then ax = 0 end
+  return ax, ay, aw, ah
 end
 
 -- view_workxywh. Called by Wind, or JTxtView, when the window
