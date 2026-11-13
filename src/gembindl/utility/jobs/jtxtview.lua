@@ -356,7 +356,7 @@ function JTxtView:view_draw(wind, x, y, w, h)
   vdi:vs_clip(svwk_h, k_scli_off, 0, 0, 0, 0)
   vdi:vr_recfl(svwk_h, x, y, x2, y2)
 
-  x2 = min(x2, self.work_x_ + self.visible_cols_width_ - 1)
+  x2 = min(x2, self.work_x_ + self.work_width_ - 1)
   if x <= x2 then
     vdi:vs_clip(svwk_h, k_scli_on, x, y, x2, y2)
     local <const> txt = self.txt
@@ -458,7 +458,6 @@ function JTxtView:view_workxywh(wind, wx, wy, ww, wh)
   local <const> visible_rows = wh // self.hcel_
   self.visible_cols_ = visible_cols
   self.visible_rows_ = visible_rows
-  self.visible_cols_width_ = visible_cols * self.wcel_
 
   -- Adjust text origin x
   local <const> txt_ncolumns = self.txt_ncolumns
@@ -644,7 +643,7 @@ function JTxtView:view_arrowed(wind, action)
       screen_mfdb_addr, screen_mfdb_addr)
 
     -- Draw the top line of text
-    local <const> x2 = self.work_x_ + self.visible_cols_width_ - 1
+    local <const> x2 = self.work_x_ + self.work_width_ - 1
     local <const> y2 = self.work_y_ + self.hcel_ - 1
     vdi:vs_clip(svwk_h, k_scli_on,
       self.work_x_, self.work_y_, x2, y2)
@@ -685,7 +684,7 @@ function JTxtView:view_arrowed(wind, action)
       screen_mfdb_addr, screen_mfdb_addr)
 
     -- Draw the bottom line of text
-    local <const> x2 = self.work_x_ + self.visible_cols_width_ - 1
+    local <const> x2 = self.work_x_ + self.work_width_ - 1
     local <const> y2 = self.stop_line_y_ + self.hcel_ - 1
     vdi:vs_clip(svwk_h, k_scli_on,
       self.work_x_, self.stop_line_y_, x2, y2)
