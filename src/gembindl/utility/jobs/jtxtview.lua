@@ -528,7 +528,6 @@ function JTxtView:view_workxywh(wind, wx, wy, ww, wh)
 end
 
 -- view_sized. Called by Wind when the window is resized
--- Calls view_workxywh and erases fringes when shrinking.
 -- Inputs:
 --   1) table: wind: the Wind instance
 --   2) integer: wx: the window x coordinate
@@ -536,43 +535,8 @@ end
 --   4) integer: ww: the window width
 --   5) integer: wy: the window height
 function JTxtView:view_sized(wind, wx, wy, ww, wh)
-  local <const> old_work_width = self.work_width_
-  local <const> old_work_height = self.work_height_
-
   -- Set work rectangle
-  self:view_workxywh(self, wx, wy, ww, wh)
-
-  if ww >= old_work_width and wh >= old_work_height then
-    return
-  end
-
-  -- Erase any text left in the fringe after an axis shrink
-  local <const> aes = self.aes_
-  aes:graf_mouse(k_grmo_m_off)
-  aes:wind_update(k_wiup_beg_update)
-
-  local <const> vdi = self.vdi_
-  local <const> svwk_h = self.svwk_h_
-  local <const> work_x2 = self.work_x_ + self.work_width_ - 1
-  local <const> work_y2 = self.work_y_ + self.work_height_ - 1
-  vdi:vs_clip(svwk_h, k_scli_off, 0, 0, 0, 0)
-  if ww < old_work_width then
-    -- Erase right hand fringe
-    local <const> fringe = self.work_width_ % self.wcel_
-    local <const> x = work_x2 - fringe
-    vdi:vr_recfl(svwk_h, x, self.work_y_, work_x2, work_y2)
-  end
-  if wh < old_work_height then
-    -- Erase bottom fringe
-    local <const> fringe = self.work_height_ % self.hcel_
-    local <const> y = work_y2 - fringe + self.bottom_distance_
-    if y <= work_y2 then
-      vdi:vr_recfl(svwk_h, self.work_x_, y, work_x2, work_y2)
-    end
-  end
-
-  aes:wind_update(k_wiup_end_update)
-  return aes:graf_mouse(k_grmo_m_on)
+  return self:view_workxywh(self, wx, wy, ww, wh)
 end
 
 -- view_vslid. Called by Wind when the vertical slider is moved
