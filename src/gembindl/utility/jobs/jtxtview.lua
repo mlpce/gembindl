@@ -446,6 +446,8 @@ end
 --   3) integer: wy: the work area y coordinate
 --   4) integer: ww: the work area width
 --   5) integer: wh: the work area height
+-- Returns:
+--   1) boolean: true if the text origin has changed
 function JTxtView:view_workxywh(wind, wx, wy, ww, wh)
   -- Set window work rectangle
   self.work_x_ = wx
@@ -458,6 +460,9 @@ function JTxtView:view_workxywh(wind, wx, wy, ww, wh)
   local <const> visible_rows = wh // self.hcel_
   self.visible_cols_ = visible_cols
   self.visible_rows_ = visible_rows
+
+  local <const> old_txt_ox = self.txt_ox_
+  local <const> old_txt_oy = self.txt_oy_
 
   -- Adjust text origin x
   local <const> txt_ncolumns = self.txt_ncolumns
@@ -524,6 +529,9 @@ function JTxtView:view_workxywh(wind, wx, wy, ww, wh)
     self.wind_:set_hslpos(pos)
     self.hslpos_ = pos
   end
+
+  -- Return boolean indicating if the origin has changed
+  return old_txt_ox ~= self.txt_ox_ or old_txt_oy ~= self.txt_oy_
 end
 
 -- view_position. Called by Wind when the window is resized/moved
@@ -535,7 +543,12 @@ end
 --   5) integer: wy: the window height
 function JTxtView:view_position(wind, wx, wy, ww, wh)
   -- Set work rectangle
-  return self:view_workxywh(self, wx, wy, ww, wh)
+  local <const> origin_changed =
+    self:view_workxywh(self, wx, wy, ww, wh)
+  if origin_changed then
+    return self.wind_:send_redraw(self.work_x_, self.work_y_,
+      self.work_width_, self.work_height_)
+  end
 end
 
 -- view_vslid. Called by Wind when the vertical slider is moved
