@@ -526,14 +526,14 @@ function JTxtView:view_workxywh(wind, wx, wy, ww, wh)
   end
 end
 
--- view_sized. Called by Wind when the window is resized
+-- view_position. Called by Wind when the window is resized/moved
 -- Inputs:
 --   1) table: wind: the Wind instance
 --   2) integer: wx: the window x coordinate
 --   3) integer: wy: thw window y coordinate
 --   4) integer: ww: the window width
 --   5) integer: wy: the window height
-function JTxtView:view_sized(wind, wx, wy, ww, wh)
+function JTxtView:view_position(wind, wx, wy, ww, wh)
   -- Set work rectangle
   return self:view_workxywh(self, wx, wy, ww, wh)
 end

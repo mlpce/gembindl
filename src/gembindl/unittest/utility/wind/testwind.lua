@@ -100,7 +100,7 @@ function test_view:view_preposition(wind,
   return x, y, w, h
 end
 
-function test_view:view_sized(wind, wx, wy, ww, wh)
+function test_view:view_position(wind, wx, wy, ww, wh)
   self.res.wind = wind
   self.res.workwx = wx
   self.res.workwy = wy
@@ -329,7 +329,7 @@ view1:clear_results()
 mesag = { k_evme_wm_fulled, ap_id, 0, wind1:handle(), 0, 0, 0, 0 }
 wind1:dispatch(mesag)
 assert(view1.res.wind == wind1)
-assert(view1.res.operation == "shrink")
+assert(view1.res.operation == "fulled-prev")
 assert(view1.res.controls == controls)
 assert(view1.res.workwx == 16)
 assert(view1.res.workwy == wy)

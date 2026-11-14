@@ -573,7 +573,7 @@ function Wind:do_fulled_mesag_(mesag)
   local <const> wstatus, wx, wy, ww, wh =
     self.aes_:wind_get(wi_handle, k_wige_workxywh)
   assert(wstatus > 0)
-  return self.view_:view_sized(self, wx, wy, ww, wh)
+  return self.view_:view_position(self, wx, wy, ww, wh)
 end
 
 -- Process sized mesag
@@ -596,7 +596,7 @@ function Wind:do_sized_mesag_(mesag)
   local <const> wstatus, wx, wy, ww, wh =
     self.aes_:wind_get(wi_handle, k_wige_workxywh)
   assert(wstatus > 0)
-  return self.view_:view_sized(self, wx, wy, ww, wh)
+  return self.view_:view_position(self, wx, wy, ww, wh)
 end
 
 -- Process moved mesag
@@ -619,7 +619,7 @@ function Wind:do_moved_mesag_(mesag)
   local <const> wstatus, wx, wy, ww, wh =
     self.aes_:wind_get(wi_handle, k_wige_workxywh)
   assert(wstatus > 0)
-  return self.view_:view_workxywh(self, wx, wy, ww, wh)
+  return self.view_:view_position(self, wx, wy, ww, wh)
 end
 
 -- Process redraw mesag

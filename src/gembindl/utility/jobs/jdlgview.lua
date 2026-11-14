@@ -432,6 +432,18 @@ function JDlgView:view_workxywh(wind, wx, wy, ww, wh)
   return rsrc:obj_poke_pos(top_offset, ox, oy, ow, oh)
 end
 
+-- view_position. Called by Wind when the window is resized/moved
+-- Inputs:
+--   1) table: wind: the Wind instance
+--   2) integer: wx: the window x coordinate
+--   3) integer: wy: thw window y coordinate
+--   4) integer: ww: the window width
+--   5) integer: wy: the window height
+function JDlgView:view_position(wind, wx, wy, ww, wh)
+  -- Set work rectangle
+  return self:view_workxywh(self, wx, wy, ww, wh)
+end
+
 -- view_topped. Called by Wind for topped message
 -- Inputs:
 --   1) table: wind: the Wind instance
