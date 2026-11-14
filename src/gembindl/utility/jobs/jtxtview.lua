@@ -486,7 +486,7 @@ function JTxtView:view_workxywh(wind, wx, wy, ww, wh)
     stop_line = txt_nlines
   end
   self.stop_line_ = stop_line
-  self.stop_line_y_ = self.work_y_ + (self.visible_rows_ - 1) * self.hcel_
+  self.stop_line_y_ = self.work_y_ + self.work_height_ - self.hcel_
 
   -- Vertical slider size
   local size = 1000
@@ -656,8 +656,13 @@ function JTxtView:view_arrowed(wind, action)
     vdi:vs_clip(svwk_h, k_scli_off, 0, 0, 0, 0)
 
     -- Draw residual rectangle at right hand side
-    local <const> x1 = self.work_x_ +
+    local x1 = self.work_x_ +
       (#top_line_txt - self.txt_ox_) * self.wcel_
+
+    if x1 < self.work_x_ then
+      x1 = self.work_x_
+    end
+
     if x1 <= x2 then
       vdi:vr_recfl(svwk_h, x1, self.work_y_, x2, y2)
     end
@@ -697,8 +702,13 @@ function JTxtView:view_arrowed(wind, action)
     vdi:vs_clip(svwk_h, k_scli_off, 0, 0, 0, 0)
 
     -- Draw residual rectangle at right hand side
-    local <const> x1 = self.work_x_ +
+    local x1 = self.work_x_ +
       (#stop_line_txt - self.txt_ox_) * self.wcel_
+
+    if x1 < self.work_x_ then
+      x1 = self.work_x_
+    end
+
     if x1 <= x2 then
       vdi:vr_recfl(svwk_h, x1, self.stop_line_y_, x2, y2)
     end
