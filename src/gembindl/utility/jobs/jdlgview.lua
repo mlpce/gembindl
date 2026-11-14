@@ -389,6 +389,25 @@ function JDlgView:view_postdraw(wind)
   end
 end
 
+-- view_preposition. Called by Wind before a window is positioned
+-- Inputs:
+--   1) table: wind: the Wind instance
+--   2) string: operation: preposition operation
+--   3) integer: controls: the window controls
+--   4) integer: px: the window x coordinate
+--   5) integer: py: the window y coordinate
+--   6) integer: pw: the window width
+--   7) integer: ph: the window height
+-- Returns:
+--   1) integer: px: the window x coordinate
+--   2) integer: py: the window y coordinate
+--   3) integer: pw: the window width
+--   4) integer: ph: the window height
+function JDlgView:view_preposition(wind,
+    operation, controls, px, py, pw, ph)
+  return wind:rcalign(controls, px, py, pw, ph)
+end
+
 -- view_workxywh. Called by Wind when the work area is determined.
 -- Updates state and pokes the new position into the resource.
 -- Inputs:
@@ -411,6 +430,18 @@ function JDlgView:view_workxywh(wind, wx, wy, ww, wh)
   ox = wx
   oy = wy
   return rsrc:obj_poke_pos(top_offset, ox, oy, ow, oh)
+end
+
+-- view_position. Called by Wind when the window is resized/moved
+-- Inputs:
+--   1) table: wind: the Wind instance
+--   2) integer: wx: the window x coordinate
+--   3) integer: wy: thw window y coordinate
+--   4) integer: ww: the window width
+--   5) integer: wy: the window height
+function JDlgView:view_position(wind, wx, wy, ww, wh)
+  -- Set work rectangle
+  return self:view_workxywh(self, wx, wy, ww, wh)
 end
 
 -- view_topped. Called by Wind for topped message

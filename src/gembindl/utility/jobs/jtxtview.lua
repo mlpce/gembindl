@@ -26,6 +26,8 @@ local <const> k_grmo_m_on = aesdefs.grmo_m_on
 local <const> k_wiup_beg_update = aesdefs.wiup_beg_update
 local <const> k_wiup_end_update = aesdefs.wiup_end_update
 local <const> k_evmu_mesag = aesdefs.evmu_mesag
+local <const> k_wica_work = aesdefs.wica_work
+local <const> k_wica_border = aesdefs.wica_border
 
 local <const> k_scli_off = vdidefs.scli_off
 local <const> k_scli_on = vdidefs.scli_on
@@ -354,7 +356,7 @@ function JTxtView:view_draw(wind, x, y, w, h)
   vdi:vs_clip(svwk_h, k_scli_off, 0, 0, 0, 0)
   vdi:vr_recfl(svwk_h, x, y, x2, y2)
 
-  x2 = min(x2, self.work_x_ + self.visible_cols_width_ - 1)
+  x2 = min(x2, self.work_x_ + self.work_width_ - 1)
   if x <= x2 then
     vdi:vs_clip(svwk_h, k_scli_on, x, y, x2, y2)
     local <const> txt = self.txt
@@ -387,6 +389,54 @@ end
 function JTxtView:view_postdraw(wind)
 end
 
+-- view_preposition. Called by Wind before a window is positioned
+-- Inputs:
+--   1) table: wind: the Wind instance
+--   2) string: operation: preposition operation
+--   3) integer: controls: the window controls
+--   4) integer: px: the window x coordinate
+--   5) integer: py: the window y coordinate
+--   6) integer: pw: the window width
+--   7) integer: ph: the window height
+-- Returns:
+--   1) integer: px: the window x coordinate
+--   2) integer: py: the window y coordinate
+--   3) integer: pw: the window width
+--   4) integer: ph: the window height
+function JTxtView:view_preposition(wind,
+    operation, controls, px, py, pw, ph)
+  local <const> aes = self.aes_
+  local astatus, ax, ay, aw, ah =
+    aes:wind_calc(k_wica_work, controls, px, py, pw, ph)
+  assert(astatus > 0)
+
+  -- fulled-noprev means the prev rectangle postioned same as full
+  -- rectangle, so a new one needs to be chosen. 16 pixels are
+  -- added onto the x-coordinate and 16 taken off the width to make
+  -- a smaller rectangle.
+  if operation == "fulled-noprev" then
+    ax = ax + 16
+    aw = aw - 16
+  end
+
+  -- Align x coordinate
+  ax = (ax + 7) & (-16)
+
+  -- Align width and height according to cell width and height
+  local <const> wcel, hcel = self.wcel_, self.hcel_
+  aw = aw // wcel
+  aw = aw * wcel
+  ah = ah // hcel
+  ah = ah * hcel
+
+  astatus, ax, ay, aw, ah =
+    aes:wind_calc(k_wica_border, controls, ax, ay, aw, ah)
+  assert(astatus > 0)
+
+  if ax < 0 then ax = 0 end
+  return ax, ay, aw, ah
+end
+
 -- view_workxywh. Called by Wind, or JTxtView, when the window
 -- work area has changed. Updates state and calls into Wind to
 -- adjust sliders.
@@ -396,6 +446,8 @@ end
 --   3) integer: wy: the work area y coordinate
 --   4) integer: ww: the work area width
 --   5) integer: wh: the work area height
+-- Returns:
+--   1) boolean: true if the text origin has changed
 function JTxtView:view_workxywh(wind, wx, wy, ww, wh)
   -- Set window work rectangle
   self.work_x_ = wx
@@ -408,7 +460,9 @@ function JTxtView:view_workxywh(wind, wx, wy, ww, wh)
   local <const> visible_rows = wh // self.hcel_
   self.visible_cols_ = visible_cols
   self.visible_rows_ = visible_rows
-  self.visible_cols_width_ = visible_cols * self.wcel_
+
+  local <const> old_txt_ox = self.txt_ox_
+  local <const> old_txt_oy = self.txt_oy_
 
   -- Adjust text origin x
   local <const> txt_ncolumns = self.txt_ncolumns
@@ -437,7 +491,7 @@ function JTxtView:view_workxywh(wind, wx, wy, ww, wh)
     stop_line = txt_nlines
   end
   self.stop_line_ = stop_line
-  self.stop_line_y_ = self.work_y_ + (self.visible_rows_ - 1) * self.hcel_
+  self.stop_line_y_ = self.work_y_ + self.work_height_ - self.hcel_
 
   -- Vertical slider size
   local size = 1000
@@ -475,54 +529,26 @@ function JTxtView:view_workxywh(wind, wx, wy, ww, wh)
     self.wind_:set_hslpos(pos)
     self.hslpos_ = pos
   end
+
+  -- Return boolean indicating if the origin has changed
+  return old_txt_ox ~= self.txt_ox_ or old_txt_oy ~= self.txt_oy_
 end
 
--- view_sized. Called by Wind when the window is resized
--- Calls view_workxywh and erases fringes when shrinking.
+-- view_position. Called by Wind when the window is resized/moved
 -- Inputs:
 --   1) table: wind: the Wind instance
 --   2) integer: wx: the window x coordinate
 --   3) integer: wy: thw window y coordinate
 --   4) integer: ww: the window width
 --   5) integer: wy: the window height
-function JTxtView:view_sized(wind, wx, wy, ww, wh)
-  local <const> old_work_width = self.work_width_
-  local <const> old_work_height = self.work_height_
-
+function JTxtView:view_position(wind, wx, wy, ww, wh)
   -- Set work rectangle
-  self:view_workxywh(self, wx, wy, ww, wh)
-
-  if ww >= old_work_width and wh >= old_work_height then
-    return
+  local <const> origin_changed =
+    self:view_workxywh(self, wx, wy, ww, wh)
+  if origin_changed then
+    return self.wind_:send_redraw(self.work_x_, self.work_y_,
+      self.work_width_, self.work_height_)
   end
-
-  -- Erase any text left in the fringe after an axis shrink
-  local <const> aes = self.aes_
-  aes:graf_mouse(k_grmo_m_off)
-  aes:wind_update(k_wiup_beg_update)
-
-  local <const> vdi = self.vdi_
-  local <const> svwk_h = self.svwk_h_
-  local <const> work_x2 = self.work_x_ + self.work_width_ - 1
-  local <const> work_y2 = self.work_y_ + self.work_height_ - 1
-  vdi:vs_clip(svwk_h, k_scli_off, 0, 0, 0, 0)
-  if ww < old_work_width then
-    -- Erase right hand fringe
-    local <const> fringe = self.work_width_ % self.wcel_
-    local <const> x = work_x2 - fringe
-    vdi:vr_recfl(svwk_h, x, self.work_y_, work_x2, work_y2)
-  end
-  if wh < old_work_height then
-    -- Erase bottom fringe
-    local <const> fringe = self.work_height_ % self.hcel_
-    local <const> y = work_y2 - fringe + self.bottom_distance_
-    if y <= work_y2 then
-      vdi:vr_recfl(svwk_h, self.work_x_, y, work_x2, work_y2)
-    end
-  end
-
-  aes:wind_update(k_wiup_end_update)
-  return aes:graf_mouse(k_grmo_m_on)
 end
 
 -- view_vslid. Called by Wind when the vertical slider is moved
@@ -630,7 +656,7 @@ function JTxtView:view_arrowed(wind, action)
       screen_mfdb_addr, screen_mfdb_addr)
 
     -- Draw the top line of text
-    local <const> x2 = self.work_x_ + self.visible_cols_width_ - 1
+    local <const> x2 = self.work_x_ + self.work_width_ - 1
     local <const> y2 = self.work_y_ + self.hcel_ - 1
     vdi:vs_clip(svwk_h, k_scli_on,
       self.work_x_, self.work_y_, x2, y2)
@@ -643,8 +669,13 @@ function JTxtView:view_arrowed(wind, action)
     vdi:vs_clip(svwk_h, k_scli_off, 0, 0, 0, 0)
 
     -- Draw residual rectangle at right hand side
-    local <const> x1 = self.work_x_ +
+    local x1 = self.work_x_ +
       (#top_line_txt - self.txt_ox_) * self.wcel_
+
+    if x1 < self.work_x_ then
+      x1 = self.work_x_
+    end
+
     if x1 <= x2 then
       vdi:vr_recfl(svwk_h, x1, self.work_y_, x2, y2)
     end
@@ -671,7 +702,7 @@ function JTxtView:view_arrowed(wind, action)
       screen_mfdb_addr, screen_mfdb_addr)
 
     -- Draw the bottom line of text
-    local <const> x2 = self.work_x_ + self.visible_cols_width_ - 1
+    local <const> x2 = self.work_x_ + self.work_width_ - 1
     local <const> y2 = self.stop_line_y_ + self.hcel_ - 1
     vdi:vs_clip(svwk_h, k_scli_on,
       self.work_x_, self.stop_line_y_, x2, y2)
@@ -684,8 +715,13 @@ function JTxtView:view_arrowed(wind, action)
     vdi:vs_clip(svwk_h, k_scli_off, 0, 0, 0, 0)
 
     -- Draw residual rectangle at right hand side
-    local <const> x1 = self.work_x_ +
+    local x1 = self.work_x_ +
       (#stop_line_txt - self.txt_ox_) * self.wcel_
+
+    if x1 < self.work_x_ then
+      x1 = self.work_x_
+    end
+
     if x1 <= x2 then
       vdi:vr_recfl(svwk_h, x1, self.stop_line_y_, x2, y2)
     end
