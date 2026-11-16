@@ -639,8 +639,8 @@ function Wind:do_redraw_mesag_(mesag)
 
   -- Turn mouse off and begin update
   local <const> aes = self.aes_
-  aes:graf_mouse(k_grmo_m_off)
   aes:wind_update(k_wiup_beg_update)
+  aes:graf_mouse(k_grmo_m_off)
 
   local <const> view = self.view_
 
@@ -675,8 +675,8 @@ function Wind:do_redraw_mesag_(mesag)
   view:view_postdraw(self)
 
   -- End update and turn mouse on
-  aes:wind_update(k_wiup_end_update)
-  return aes:graf_mouse(k_grmo_m_on)
+  aes:graf_mouse(k_grmo_m_on)
+  return aes:wind_update(k_wiup_end_update)
 end
 
 -- Process topped message
