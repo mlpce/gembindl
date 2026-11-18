@@ -28,6 +28,7 @@ local <const> k_wiup_end_update = aesdefs.wiup_end_update
 local <const> k_evmu_mesag = aesdefs.evmu_mesag
 local <const> k_wica_work = aesdefs.wica_work
 local <const> k_wica_border = aesdefs.wica_border
+local <const> k_wige_firstxywh = aesdefs.wige_firstxywh
 
 local <const> k_scli_off = vdidefs.scli_off
 local <const> k_scli_on = vdidefs.scli_on
@@ -560,11 +561,13 @@ function JTxtView:view_vslid(wind, pos)
   if self.txt_nlines > self.visible_rows_ then
     oy = pos * (self.txt_nlines - self.visible_rows_) // 1000
   end
-  self.txt_oy_ = oy
-  self:view_workxywh(self.wind_,
-    self.work_x_, self.work_y_, self.work_width_, self.work_height_)
-  return self.wind_:send_redraw(self.work_x_, self.work_y_,
-    self.work_width_, self.work_height_)
+  if oy ~= self.txt_oy_ then
+    self.txt_oy_ = oy
+    self:view_workxywh(self.wind_,
+      self.work_x_, self.work_y_, self.work_width_, self.work_height_)
+    return self.wind_:send_redraw(self.work_x_, self.work_y_,
+      self.work_width_, self.work_height_)
+  end
 end
 
 -- view_hslid. Called by Wind when the horizontal slider is moved
@@ -576,11 +579,13 @@ function JTxtView:view_hslid(wind, pos)
   if self.txt_ncolumns > self.visible_cols_ then
     ox = pos * (self.txt_ncolumns - self.visible_cols_) // 1000
   end
-  self.txt_ox_ = ox
-  self:view_workxywh(self.wind_,
-    self.work_x_, self.work_y_, self.work_width_, self.work_height_)
-  return self.wind_:send_redraw(self.work_x_, self.work_y_,
-    self.work_width_, self.work_height_)
+  if ox ~= self.txt_ox_ then
+    self.txt_ox_ = ox
+    self:view_workxywh(self.wind_,
+      self.work_x_, self.work_y_, self.work_width_, self.work_height_)
+    return self.wind_:send_redraw(self.work_x_, self.work_y_,
+      self.work_width_, self.work_height_)
+  end
 end
 
 -- view_arrowed. Called by Wind when a slider is paged or arrow pressed
@@ -617,175 +622,188 @@ function JTxtView:view_arrowed(wind, action)
     self.txt_ox_ = 0
   end
 
-  local <const> work_x2 = self.work_x_ + self.work_width_ - 1
-  local <const> work_y2 = self.work_y_ + self.work_height_ - 1
+  local <const> wind = self.wind_
+  local <const> work_x = self.work_x_
+  local <const> work_y = self.work_y_
+  local <const> work_width = self.work_width_
+  local <const> work_height = self.work_height_
 
   -- Re-apply work rectangle
-  self:view_workxywh(self.wind_,
-    self.work_x_, self.work_y_, self.work_width_, self.work_height_)
+  self:view_workxywh(wind, work_x, work_y, work_width, work_height)
 
-  -- Vertical and width deltas for computing cpyfm coords
-  local <const> vdelta = self.visible_rows_ * self.hcel_ - 1
-  local <const> wdelta = self.visible_cols_ * self.wcel_ - 1
-  local <const> vdi = self.vdi_
-  local <const> aes = self.aes_
-  local <const> svwk_h = self.svwk_h_
-  local <const> screen_mfdb_addr = self.screen_mfdb_addr_
-  local <const> coords = self.cpyfm_coords_
-
-  vdi:vs_clip(svwk_h, k_scli_off, 0, 0, 0, 0)
-
-  if self.txt_oy_ == old_txt_oy - 1 then
-    -- Scroll up
-    aes:graf_mouse(k_grmo_m_off)
-    aes:wind_update(k_wiup_beg_update)
-
-    -- Blit down
-    -- Source rectangle
-    coords[1] = self.work_x_
-    coords[2] = self.work_y_
-    coords[3] = work_x2
-    coords[4] = self.work_y_ + vdelta - self.hcel_
-    -- Destination rectangle
-    coords[5] = self.work_x_
-    coords[6] = self.work_y_ + self.hcel_
-    coords[7] = work_x2
-    coords[8] = self.work_y_ + vdelta
-
-    vdi:vro_cpyfm(svwk_h, k_rocp_s_only, coords,
-      screen_mfdb_addr, screen_mfdb_addr)
-
-    -- Draw the top line of text
-    local <const> x2 = self.work_x_ + self.work_width_ - 1
-    local <const> y2 = self.work_y_ + self.hcel_ - 1
-    vdi:vs_clip(svwk_h, k_scli_on,
-      self.work_x_, self.work_y_, x2, y2)
-
-    local top_line_txt = self.txt[self.txt_oy_ + 1]
-    vdi:v_gtext(svwk_h,
-      self.rx_, self.work_y_ + self.base_distance_,
-      top_line_txt)
-
-    vdi:vs_clip(svwk_h, k_scli_off, 0, 0, 0, 0)
-
-    -- Draw residual rectangle at right hand side
-    local x1 = self.work_x_ +
-      (#top_line_txt - self.txt_ox_) * self.wcel_
-
-    if x1 < self.work_x_ then
-      x1 = self.work_x_
-    end
-
-    if x1 <= x2 then
-      vdi:vr_recfl(svwk_h, x1, self.work_y_, x2, y2)
-    end
-
-    aes:wind_update(k_wiup_end_update)
-    aes:graf_mouse(k_grmo_m_on)
-  elseif self.txt_oy_ == old_txt_oy + 1 then
-    -- Scroll down
-    aes:graf_mouse(k_grmo_m_off)
-    aes:wind_update(k_wiup_beg_update)
-
-    -- Blit up
-    -- Source rectangle
-    coords[1] = self.work_x_
-    coords[2] = self.work_y_ + self.hcel_
-    coords[3] = work_x2
-    coords[4] = self.work_y_ + vdelta
-    -- Destination rectangle
-    coords[5] = self.work_x_
-    coords[6] = self.work_y_
-    coords[7] = work_x2
-    coords[8] = self.work_y_ + vdelta - self.hcel_
-    vdi:vro_cpyfm(svwk_h, k_rocp_s_only, coords,
-      screen_mfdb_addr, screen_mfdb_addr)
-
-    -- Draw the bottom line of text
-    local <const> x2 = self.work_x_ + self.work_width_ - 1
-    local <const> y2 = self.stop_line_y_ + self.hcel_ - 1
-    vdi:vs_clip(svwk_h, k_scli_on,
-      self.work_x_, self.stop_line_y_, x2, y2)
-
-    local stop_line_txt = self.txt[self.stop_line_]
-    vdi:v_gtext(svwk_h,
-      self.rx_, self.stop_line_y_ + self.base_distance_,
-      stop_line_txt)
-
-    vdi:vs_clip(svwk_h, k_scli_off, 0, 0, 0, 0)
-
-    -- Draw residual rectangle at right hand side
-    local x1 = self.work_x_ +
-      (#stop_line_txt - self.txt_ox_) * self.wcel_
-
-    if x1 < self.work_x_ then
-      x1 = self.work_x_
-    end
-
-    if x1 <= x2 then
-      vdi:vr_recfl(svwk_h, x1, self.stop_line_y_, x2, y2)
-    end
-
-    aes:wind_update(k_wiup_end_update)
-    aes:graf_mouse(k_grmo_m_on)
-  elseif self.txt_ox_ == old_txt_ox + 1 then
-    -- Scroll right
-    aes:graf_mouse(k_grmo_m_off)
-    aes:wind_update(k_wiup_beg_update)
-
-    -- Blit left
-    -- Source rectangle
-    coords[1] = self.work_x_ + self.wcel_
-    coords[2] = self.work_y_
-    coords[3] = self.work_x_ + wdelta
-    coords[4] = work_y2
-    -- Destination rectangle
-    coords[5] = self.work_x_
-    coords[6] = self.work_y_
-    coords[7] = self.work_x_ + wdelta - self.wcel_
-    coords[8] = work_y2
-
-    vdi:vro_cpyfm(svwk_h, k_rocp_s_only, coords,
-      screen_mfdb_addr, screen_mfdb_addr)
-
-    -- Redraw right hand column
-    self:view_draw(self.wind_,
-      self.work_x_ + wdelta - self.wcel_ + 1, self.work_y_,
-      self.wcel_, vdelta + 1)
-
-    aes:wind_update(k_wiup_end_update)
-    aes:graf_mouse(k_grmo_m_on)
-  elseif self.txt_ox_ == old_txt_ox - 1 then
-    -- Scroll left
-    aes:graf_mouse(k_grmo_m_off)
-    aes:wind_update(k_wiup_beg_update)
-
-    -- Blit right
-    -- Source rectangle
-    coords[1] = self.work_x_
-    coords[2] = self.work_y_
-    coords[3] = self.work_x_ + wdelta - self.wcel_
-    coords[4] = work_y2
-    -- Destination rectangle
-    coords[5] = self.work_x_ + self.wcel_
-    coords[6] = self.work_y_
-    coords[7] = self.work_x_ + wdelta
-    coords[8] = work_y2
-
-    vdi:vro_cpyfm(svwk_h, k_rocp_s_only, coords,
-      screen_mfdb_addr, screen_mfdb_addr)
-
-    -- Redraw left hand column
-    self:view_draw(self.wind_,
-      self.work_x_, self.work_y_,
-      self.wcel_, vdelta + 1)
-
-    aes:wind_update(k_wiup_end_update)
-    aes:graf_mouse(k_grmo_m_on)
-  elseif self.txt_oy_ ~= old_txt_oy or self.txt_ox_ ~= old_txt_ox then
-    return self.wind_:send_redraw(self.work_x_, self.work_y_,
-      self.work_width_, self.work_height_)
+  local <const> x_delta = self.txt_ox_ - old_txt_ox
+  local <const> y_delta = self.txt_oy_ - old_txt_oy
+  -- If the text origin is the same then nothing needs to be drawn
+  if x_delta == 0 and y_delta == 0 then
+    return
+  elseif x_delta < -1 or x_delta > 1 or y_delta < -1 or y_delta > 1 then
+    -- Change is greater than one column or row so send redraw
+    return wind:send_redraw(work_x, work_y, work_width, work_height)
   end
+
+  -- Begin screen update
+  local <const> aes = self.aes_
+  aes:wind_update(k_wiup_beg_update)
+
+  -- Is the window partially obscured?
+  local status, x, y, w, h =
+    aes:wind_get(wind:handle(), k_wige_firstxywh)
+  if status == 0 or x ~= work_x or y ~= work_y or
+      w ~= work_width or h ~= work_height then
+    -- Window is partially obscured so send redraw
+    wind:send_redraw(work_x, work_y, work_width, work_height)
+  else
+    -- Blit then draw one line / column
+    local <const> vdi = self.vdi_
+    local <const> svwk_h = self.svwk_h_
+    local <const> screen_mfdb_addr = self.screen_mfdb_addr_
+    local <const> coords = self.cpyfm_coords_
+    local <const> work_x2 = work_x + work_width - 1
+    local <const> work_y2 = work_y + work_height - 1
+    local <const> wcel = self.wcel_
+    local <const> hcel = self.hcel_
+
+    vdi:vs_clip(svwk_h, k_scli_off, 0, 0, 0, 0)
+
+    if y_delta < 0 then
+      -- Scroll up
+      aes:graf_mouse(k_grmo_m_off)
+
+      -- Blit down
+      -- Source rectangle
+      coords[1] = work_x
+      coords[2] = work_y
+      coords[3] = work_x2
+      coords[4] = work_y2 - hcel
+      -- Destination rectangle
+      coords[5] = work_x
+      coords[6] = work_y + hcel
+      coords[7] = work_x2
+      coords[8] = work_y2
+
+      vdi:vro_cpyfm(svwk_h, k_rocp_s_only, coords,
+        screen_mfdb_addr, screen_mfdb_addr)
+
+      -- Draw the top line of text
+      local <const> y2 = work_y + hcel - 1
+      vdi:vs_clip(svwk_h, k_scli_on,
+        work_x, work_y, work_x2, y2)
+
+      local <const> top_line_txt = self.txt[self.txt_oy_ + 1]
+      vdi:v_gtext(svwk_h, self.rx_, work_y + self.base_distance_,
+        top_line_txt)
+
+      vdi:vs_clip(svwk_h, k_scli_off, 0, 0, 0, 0)
+
+      -- Draw residual rectangle at right hand side
+      local x1 = work_x +
+        (#top_line_txt - self.txt_ox_) * wcel
+
+      if x1 < work_x then
+        x1 = work_x
+      end
+
+      if x1 <= work_x2 then
+        vdi:vr_recfl(svwk_h, x1, work_y, work_x2, y2)
+      end
+
+      aes:graf_mouse(k_grmo_m_on)
+    elseif y_delta > 0 then
+      -- Scroll down
+      aes:graf_mouse(k_grmo_m_off)
+
+      -- Blit up
+      -- Source rectangle
+      coords[1] = work_x
+      coords[2] = work_y + hcel
+      coords[3] = work_x2
+      coords[4] = work_y2
+      -- Destination rectangle
+      coords[5] = work_x
+      coords[6] = work_y
+      coords[7] = work_x2
+      coords[8] = work_y2 - hcel
+      vdi:vro_cpyfm(svwk_h, k_rocp_s_only, coords,
+        screen_mfdb_addr, screen_mfdb_addr)
+
+      -- Draw the bottom line of text
+      local <const> stop_line_y = self.stop_line_y_
+      local <const> y2 = stop_line_y + hcel - 1
+      vdi:vs_clip(svwk_h, k_scli_on,
+        work_x, stop_line_y, work_x2, y2)
+
+      local <const> stop_line_txt = self.txt[self.stop_line_]
+      vdi:v_gtext(svwk_h,
+        self.rx_, stop_line_y + self.base_distance_,
+        stop_line_txt)
+
+      vdi:vs_clip(svwk_h, k_scli_off, 0, 0, 0, 0)
+
+      -- Draw residual rectangle at right hand side
+      local x1 = work_x +
+        (#stop_line_txt - self.txt_ox_) * self.wcel_
+
+      if x1 < work_x then
+        x1 = work_x
+      end
+
+      if x1 <= work_x2 then
+        vdi:vr_recfl(svwk_h, x1, stop_line_y, work_x2, y2)
+      end
+
+      aes:graf_mouse(k_grmo_m_on)
+    elseif x_delta > 0 then
+      -- Scroll right
+      aes:graf_mouse(k_grmo_m_off)
+
+      -- Blit left
+      -- Source rectangle
+      coords[1] = work_x + wcel
+      coords[2] = work_y
+      coords[3] = work_x2
+      coords[4] = work_y2
+      -- Destination rectangle
+      coords[5] = work_x
+      coords[6] = work_y
+      coords[7] = work_x2 - wcel
+      coords[8] = work_y2
+
+      vdi:vro_cpyfm(svwk_h, k_rocp_s_only, coords,
+        screen_mfdb_addr, screen_mfdb_addr)
+
+      -- Redraw right hand column
+      self:view_draw(wind, work_x2 - wcel + 1, work_y,
+        wcel, work_height)
+
+      aes:graf_mouse(k_grmo_m_on)
+    elseif x_delta < 0 then
+      -- Scroll left
+      aes:graf_mouse(k_grmo_m_off)
+
+      -- Blit right
+      -- Source rectangle
+      coords[1] = work_x
+      coords[2] = work_y
+      coords[3] = work_x2 - wcel
+      coords[4] = work_y2
+      -- Destination rectangle
+      coords[5] = work_x + wcel
+      coords[6] = work_y
+      coords[7] = work_x2
+      coords[8] = work_y2
+
+      vdi:vro_cpyfm(svwk_h, k_rocp_s_only, coords,
+        screen_mfdb_addr, screen_mfdb_addr)
+
+      -- Redraw left hand column
+      self:view_draw(wind, work_x, work_y, wcel, work_height)
+
+      aes:graf_mouse(k_grmo_m_on)
+    end
+  end
+
+  -- End screen update
+  aes:wind_update(k_wiup_end_update)
 end
 
 -- view_topped. Called by Wind for topped message
