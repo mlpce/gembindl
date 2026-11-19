@@ -357,14 +357,18 @@ function JTxtView:view_draw(wind, x, y, w, h)
   vdi:vs_clip(svwk_h, k_scli_off, 0, 0, 0, 0)
   vdi:vr_recfl(svwk_h, x, y, x2, y2)
 
-  x2 = min(x2, self.work_x_ + self.work_width_ - 1)
+  x2 = min(x2, self.work_x2_)
   if x <= x2 then
     vdi:vs_clip(svwk_h, k_scli_on, x, y, x2, y2)
     local <const> txt = self.txt
     local <const> hcel = self.hcel_
     local <const> rx = self.rx_
-    local ry = self.ry_
-    for line = self.txt_oy_ + 1, self.stop_line_ do
+    local <const> lines_above = (y - self.work_y_) // hcel
+    local <const> lines_below = (self.work_y2_ - y2) // hcel
+
+    local ry = self.ry_ + lines_above * self.hcel_
+    for line = self.txt_oy_ + 1 + lines_above,
+        self.stop_line_ - lines_below do
       vdi:v_gtext(svwk_h, rx, ry, txt[line])
       ry = ry + hcel
     end
@@ -455,6 +459,8 @@ function JTxtView:view_workxywh(wind, wx, wy, ww, wh)
   self.work_y_ = wy
   self.work_width_ = ww
   self.work_height_ = wh
+  self.work_x2_ = wx + ww - 1
+  self.work_y2_ = wy + wh - 1
 
   -- Number of visible columns and rows in the view
   local <const> visible_cols = ww // self.wcel_
@@ -658,8 +664,8 @@ function JTxtView:view_arrowed(wind, action)
     local <const> svwk_h = self.svwk_h_
     local <const> screen_mfdb_addr = self.screen_mfdb_addr_
     local <const> coords = self.cpyfm_coords_
-    local <const> work_x2 = work_x + work_width - 1
-    local <const> work_y2 = work_y + work_height - 1
+    local <const> work_x2 = self.work_x2_
+    local <const> work_y2 = self.work_y2_
     local <const> wcel = self.wcel_
     local <const> hcel = self.hcel_
 
