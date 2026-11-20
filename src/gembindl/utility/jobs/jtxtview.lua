@@ -366,7 +366,7 @@ function JTxtView:view_draw(wind, x, y, w, h)
     local <const> lines_above = (y - self.work_y_) // hcel
     local <const> lines_below = (self.work_y2_ - y2) // hcel
 
-    local ry = self.ry_ + lines_above * self.hcel_
+    local ry = self.ry_ + lines_above * hcel
     for line = self.txt_oy_ + 1 + lines_above,
         self.stop_line_ - lines_below do
       vdi:v_gtext(svwk_h, rx, ry, txt[line])
