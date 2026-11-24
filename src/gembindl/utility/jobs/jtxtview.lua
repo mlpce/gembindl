@@ -351,27 +351,48 @@ end
 function JTxtView:view_draw(wind, x, y, w, h)
   local <const> vdi = self.vdi_
   local <const> svwk_h = self.svwk_h_
-
-  local x2 = x + w - 1
+  local <const> x2 = x + w - 1
   local <const> y2 = y + h - 1
+
+  -- Fill the area being drawn with a rectangle
   vdi:vs_clip(svwk_h, k_scli_off, 0, 0, 0, 0)
   vdi:vr_recfl(svwk_h, x, y, x2, y2)
 
-  x2 = min(x2, self.work_x2_)
-  if x <= x2 then
-    vdi:vs_clip(svwk_h, k_scli_on, x, y, x2, y2)
-    local <const> txt = self.txt
-    local <const> hcel = self.hcel_
-    local <const> rx = self.rx_
-    local <const> lines_above = (y - self.work_y_) // hcel
-    local <const> lines_below = (self.work_y2_ - y2) // hcel
+  -- Clip the area being drawn
+  vdi:vs_clip(svwk_h, k_scli_on, x, y, x2, y2)
 
-    local ry = self.ry_ + lines_above * hcel
-    for line = self.txt_oy_ + 1 + lines_above,
-        self.stop_line_ - lines_below do
-      vdi:v_gtext(svwk_h, rx, ry, txt[line])
-      ry = ry + hcel
-    end
+  -- Work out the number of text lines above and below the clipping
+  -- area. These lines will not be drawn therefore do not need to be
+  -- sent to v_gtext.
+  local <const> hcel = self.hcel_
+  local <const> lines_above = (y - self.work_y_) // hcel
+  local <const> lines_below = (self.work_y2_ - y2) // hcel
+
+  -- The index in the txt table of the first line to be rendered.
+  -- This is increased by the lines_above value so the lines above
+  -- the clipping area are not sent to v_gtext.
+  local <const> start_line = self.txt_oy_ + 1 + lines_above
+
+  -- The index in the txt table of the last line to be rendered.
+  -- This is decreased by the lines_below value so the lines below
+  -- the clipping area are not sent to v_gtext.
+  local stop_line = self.txt_oy_ + self.visible_rows_ - lines_below
+
+  -- The stop line index must be limited against the number of lines in
+  -- the txt table.
+  local <const> txt_nlines = self.txt_nlines
+  if stop_line > txt_nlines then
+    stop_line = txt_nlines
+  end
+
+  -- Draw the text lines within the clipping area. self.ry_ is already
+  -- adjusted for the base distance of the font.
+  local <const> txt = self.txt
+  local <const> rx = self.rx_
+  local ry = self.ry_  + lines_above * hcel
+  for line = start_line, stop_line do
+    vdi:v_gtext(svwk_h, rx, ry, txt[line])
+    ry = ry + hcel
   end
 end
 
