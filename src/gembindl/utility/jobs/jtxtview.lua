@@ -376,6 +376,12 @@ function JTxtView:view_draw(wind, x, y, w, h)
   local <const> txt_oy = self.txt_oy_
   local <const> lines_above = (y - work_y) // hcel
   local <const> lines_below = (work_y2 - y2) // hcel
+  -- Work out the number of text characters left and right of the
+  -- clipping area. These characters will not be drawn therefore do
+  -- not need to be sent to v_gtext.
+  local <const> wcel = self.wcel_
+  local <const> lines_left = (x - work_x) // wcel
+  local <const> lines_right = (work_x2 - x2) // wcel
 
   -- The index in the txt table of the first line to be rendered.
   -- This is increased by the lines_above value so the lines above
@@ -397,15 +403,16 @@ function JTxtView:view_draw(wind, x, y, w, h)
   -- Determine the first and last character positions in the string to
   -- render.
   local <const> txt_ox = self.txt_ox_
-  local <const> first_char_pos = txt_ox + 1
-  local <const> last_char_pos = txt_ox + self.visible_cols_
+  local <const> first_char_pos = txt_ox + 1 + lines_left
+  local <const> last_char_pos = txt_ox + self.visible_cols_ - lines_right
 
   -- Draw the text lines within the clipping area. self.ry_ is already
   -- adjusted for the base distance of the font.
   local <const> txt = self.txt
+  local <const> rx = work_x + lines_left * wcel
   local ry = self.ry_  + lines_above * hcel
   for line = start_line, stop_line do
-    vdi:v_gtext(svwk_h, work_x, ry, txt[line], first_char_pos, last_char_pos)
+    vdi:v_gtext(svwk_h, rx, ry, txt[line], first_char_pos, last_char_pos)
     ry = ry + hcel
   end
 end
