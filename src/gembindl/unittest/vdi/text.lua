@@ -137,6 +137,10 @@ assert(cellw == 8)
 assert(oleft == 0)
 assert(oright == 0)
 
+-- Check vqt_extent (substring)
+local x1, y1, x2, y2, x3, y3, x4, y4 = vdi:vqt_extent(svwk_h, "AUB", 2, 2)
+assert(x2 == 8)
+
 -- Add effects into an array
 local effs_tbl = {
   vdidefs.stef_normal,
@@ -310,6 +314,20 @@ assert(hcellp == 6)
 
 -- Render at the point size
 vdi:v_gtext(svwk_h, 0, hcell*14, "UNITTEST")
+
+-- Each of these must render the string "substring"
+vdi:v_gtext(svwk_h, 0, hcell*15, "Render a substring using v_gtext", 10, 18)
+vdi:v_gtext(svwk_h, 0, hcell*16, "Render a substring using v_gtext", -23, -15)
+vdi:v_gtext(svwk_h, 0, hcell*17, "Render a substring using v_gtext", -23, 18)
+vdi:v_gtext(svwk_h, 0, hcell*18, "Render a substring using v_gtext", 10, -15)
+-- Must render nothing due to reversed indices
+vdi:v_gtext(svwk_h, 0, hcell*19, "nothing", 3, 1)
+vdi:v_gtext(svwk_h, 0, hcell*20, "rendered", -5, -8)
+vdi:v_gtext(svwk_h, 0, hcell*21, "bad", 3, -3)
+vdi:v_gtext(svwk_h, 0, hcell*22, "positions", -1, 1)
+
+vdi:v_justified(svwk_h, 0, hcell*19, "This substring is justified between chars", x_max,
+  vdidefs.just_nojustify, vdidefs.just_justify, 6, -15)
 
 -- Unloading fronts from screen vwk handle
 vdi:vst_unload_fonts(svwk_h)
