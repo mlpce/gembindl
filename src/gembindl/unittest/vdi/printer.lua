@@ -81,6 +81,9 @@ gemdos.Cconws(
   "Call v_alpha_text to printer virtual wk handle: " .. pvwk_h .. "\r\n")
 vdi:v_alpha_text(pvwk_h, "Hello world")
 
+-- Output some alpha text to the printer as a sub string
+vdi:v_alpha_text(pvwk_h, "Substring", 4, 6)
+
 -- Perform graphic output with the printer fonts
 gemdos.Cconws("Outputting to printer virtual wk handle: " .. pvwk_h .. "\r\n")
 for k,v in ipairs(enumed_printer_fonts) do

@@ -358,25 +358,40 @@ function JTxtView:view_draw(wind, x, y, w, h)
   vdi:vs_clip(svwk_h, k_scli_off, 0, 0, 0, 0)
   vdi:vr_recfl(svwk_h, x, y, x2, y2)
 
-  -- Clip the area being drawn
-  vdi:vs_clip(svwk_h, k_scli_on, x, y, x2, y2)
+  -- Enable clipping if the draw rectangle does not match the
+  -- work area.
+  local <const> work_x = self.work_x_
+  local <const> work_y = self.work_y_
+  local <const> work_x2 = self.work_x2_
+  local <const> work_y2 = self.work_y2_
+  if x ~= work_x or y ~= work_y or
+      x2 ~= work_x2 or y2 ~= work_y2 then
+    vdi:vs_clip(svwk_h, k_scli_on, x, y, x2, y2)
+  end
 
   -- Work out the number of text lines above and below the clipping
   -- area. These lines will not be drawn therefore do not need to be
   -- sent to v_gtext.
   local <const> hcel = self.hcel_
-  local <const> lines_above = (y - self.work_y_) // hcel
-  local <const> lines_below = (self.work_y2_ - y2) // hcel
+  local <const> txt_oy = self.txt_oy_
+  local <const> lines_above = (y - work_y) // hcel
+  local <const> lines_below = (work_y2 - y2) // hcel
+  -- Work out the number of text characters left and right of the
+  -- clipping area. These characters will not be drawn therefore do
+  -- not need to be sent to v_gtext.
+  local <const> wcel = self.wcel_
+  local <const> lines_left = (x - work_x) // wcel
+  local <const> lines_right = (work_x2 - x2) // wcel
 
   -- The index in the txt table of the first line to be rendered.
   -- This is increased by the lines_above value so the lines above
   -- the clipping area are not sent to v_gtext.
-  local <const> start_line = self.txt_oy_ + 1 + lines_above
+  local <const> start_line = txt_oy + 1 + lines_above
 
   -- The index in the txt table of the last line to be rendered.
   -- This is decreased by the lines_below value so the lines below
   -- the clipping area are not sent to v_gtext.
-  local stop_line = self.txt_oy_ + self.visible_rows_ - lines_below
+  local stop_line = txt_oy + self.visible_rows_ - lines_below
 
   -- The stop line index must be limited against the number of lines in
   -- the txt table.
@@ -385,13 +400,19 @@ function JTxtView:view_draw(wind, x, y, w, h)
     stop_line = txt_nlines
   end
 
+  -- Determine the first and last character positions in the string to
+  -- render.
+  local <const> txt_ox = self.txt_ox_
+  local <const> first_char_pos = txt_ox + 1 + lines_left
+  local <const> last_char_pos = txt_ox + self.visible_cols_ - lines_right
+
   -- Draw the text lines within the clipping area. self.ry_ is already
   -- adjusted for the base distance of the font.
   local <const> txt = self.txt
-  local <const> rx = self.rx_
+  local <const> rx = work_x + lines_left * wcel
   local ry = self.ry_  + lines_above * hcel
   for line = start_line, stop_line do
-    vdi:v_gtext(svwk_h, rx, ry, txt[line])
+    vdi:v_gtext(svwk_h, rx, ry, txt[line], first_char_pos, last_char_pos)
     ry = ry + hcel
   end
 end
@@ -511,7 +532,6 @@ function JTxtView:view_workxywh(wind, wx, wy, ww, wh)
   end
 
   -- Work out render position
-  self.rx_ = self.work_x_ - self.txt_ox_ * self.wcel_
   self.ry_ = self.work_y_ + self.base_distance_
   -- Work out stop line
   local stop_line = self.txt_oy_ + visible_rows
@@ -713,14 +733,9 @@ function JTxtView:view_arrowed(wind, action)
 
       -- Draw the top line of text
       local <const> y2 = work_y + hcel - 1
-      vdi:vs_clip(svwk_h, k_scli_on,
-        work_x, work_y, work_x2, y2)
-
       local <const> top_line_txt = self.txt[self.txt_oy_ + 1]
-      vdi:v_gtext(svwk_h, self.rx_, work_y + self.base_distance_,
-        top_line_txt)
-
-      vdi:vs_clip(svwk_h, k_scli_off, 0, 0, 0, 0)
+      vdi:v_gtext(svwk_h, work_x, work_y + self.base_distance_,
+        top_line_txt, self.txt_ox_ + 1, self.txt_ox_ + self.visible_cols_)
 
       -- Draw residual rectangle at right hand side
       local x1 = work_x +
@@ -756,15 +771,10 @@ function JTxtView:view_arrowed(wind, action)
       -- Draw the bottom line of text
       local <const> stop_line_y = self.stop_line_y_
       local <const> y2 = stop_line_y + hcel - 1
-      vdi:vs_clip(svwk_h, k_scli_on,
-        work_x, stop_line_y, work_x2, y2)
-
       local <const> stop_line_txt = self.txt[self.stop_line_]
       vdi:v_gtext(svwk_h,
-        self.rx_, stop_line_y + self.base_distance_,
-        stop_line_txt)
-
-      vdi:vs_clip(svwk_h, k_scli_off, 0, 0, 0, 0)
+        work_x, stop_line_y + self.base_distance_,
+        stop_line_txt, self.txt_ox_ + 1, self.txt_ox_ + self.visible_cols_)
 
       -- Draw residual rectangle at right hand side
       local x1 = work_x +

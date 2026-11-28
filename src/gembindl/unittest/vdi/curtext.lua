@@ -109,6 +109,47 @@ row, column = vdi:vq_curaddress(vwk_h)
 assert(row == 1)
 assert(column == 7)
 
+-- Sub strings
+str = "hello there"
+-- Output 'hello'
+vdi:vs_curaddress(vwk_h, 2, 1)
+vdi:v_curtext(vwk_h, str, 1, 5)
+row, column = vdi:vq_curaddress(vwk_h)
+assert(row == 2)
+assert(column == 6)
+
+vdi:vs_curaddress(vwk_h, 3, 1)
+-- Output 'lo there'
+vdi:v_curtext(vwk_h, str, 4)
+row, column = vdi:vq_curaddress(vwk_h)
+assert(row == 3)
+assert(column == 9)
+
+vdi:vs_curaddress(vwk_h, 4, 1)
+-- Output 'there'
+vdi:v_curtext(vwk_h, str, -5)
+row, column = vdi:vq_curaddress(vwk_h)
+assert(row == 4)
+assert(column == 6)
+
+vdi:vs_curaddress(vwk_h, 5, 1)
+-- Output 'the'
+vdi:v_curtext(vwk_h, str, -5, -3)
+row, column = vdi:vq_curaddress(vwk_h)
+assert(row == 5)
+assert(column == 4)
+
+vdi:vs_curaddress(vwk_h, 6, 1)
+-- Reversed indices output nothing
+vdi:v_curtext(vwk_h, str, 2, 1)
+row, column = vdi:vq_curaddress(vwk_h)
+assert(row == 6)
+assert(column == 1)
+vdi:v_curtext(vwk_h, str, -1, -2)
+row, column = vdi:vq_curaddress(vwk_h)
+assert(row == 6)
+assert(column == 1)
+
 -- Exit text mode
 vdi:v_exit_cur(vwk_h)
 
