@@ -1,5 +1,10 @@
 global assert, setmetatable, table, gempb
 
+-- Check binding version.
+-- Requires 1.1 or later for gempb setstr change.
+local <const> major, minor = gempb.utility.version()
+assert(major > 1 or minor >= 1, "gempb version 1.1 required")
+
 local <const> VDI = {}
 
 local <const> k_vdi_control = gempb.const.Pbid.vdi_control
@@ -184,10 +189,11 @@ end
 -- Input:
 --   1) integer: workstation handle
 --   2) string: the string to output
-function VDI:v_curtext(handle, str)
+--   3) optional integer: position of first char in string
+--   4) optional integer: position of last char in string
+function VDI:v_curtext(handle, str, i, j)
   local <const> pb = self.pb_
-  pb:setstr(0, str)
-  return pb:vdi(handle, 5, 12, #str)
+  return pb:vdi(handle, 5, 12, pb:setstr(0, str, i, j))
 end
 
 -- v_rvon. Turn on reverse video.
@@ -296,11 +302,11 @@ function VDI:v_bit_image(handle, filename, aspect, xscale, yscale,
   pxy = pxy or {}
   assert(#pxy <= 4)
   local <const> pb = self.pb_
-  pb:setstr(5, filename)
   pb:set(k_vdi_ptsin, 0, pxy)
   return pb:call(
     k_vdi_intin, 5, aspect, xscale, yscale, halign, valign,
-    k_vdi_control, 5, handle, 5, 23, #filename + 5, #pxy >> 1)
+    k_vdi_control, 5, handle, 5, 23, 5 + pb:setstr(5, filename),
+    #pxy >> 1)
 end
 
 -- vq_scan. Query printer banding
@@ -322,10 +328,11 @@ end
 -- Input:
 --   1) integer: workstation handle
 --   2) string: the string to output
-function VDI:v_alpha_text(handle, str)
+--   3) optional integer: position of first char in string
+--   4) optional integer: position of last char in string
+function VDI:v_alpha_text(handle, str, i, j)
   local <const> pb = self.pb_
-  pb:setstr(0, str)
-  return pb:vdi(handle, 5, 25, #str)
+  return pb:vdi(handle, 5, 25, pb:setstr(0, str, i, j))
 end
 
 -- vm_filename. User-defined filename for metafile
@@ -334,8 +341,7 @@ end
 --   2) string: filename
 function VDI:vm_filename(handle, fname)
   local <const> pb = self.pb_
-  pb:setstr(0, fname)
-  return pb:vdi(handle, 5, 100, #fname)
+  return pb:vdi(handle, 5, 100, pb:setstr(0, fname))
 end
 
 -- v_pline_t. Output polyline using table coordinates
@@ -384,12 +390,13 @@ end
 --   2) integer: x coordinate
 --   3) integer: y coordinate
 --   4) string: the text to write
-function VDI:v_gtext(handle, x, y, str)
+--   5) optional integer: position of first char in string
+--   6) optional integer: position of last char in string
+function VDI:v_gtext(handle, x, y, str, i, j)
   local <const> pb = self.pb_
-  pb:setstr(0, str)
   return pb:call(
     k_vdi_ptsin, 2, x, y,
-    k_vdi_control, 5, handle, 8, 0, #str, 1
+    k_vdi_control, 5, handle, 8, 0, pb:setstr(0, str, i, j), 1
   )
 end
 
@@ -549,14 +556,15 @@ end
 --   5) integer: pixel length for justification
 --   6) integer: 1 = justify between words, otherwise 0
 --   7) integer: 1 = justify between characters, otherwise 0
+--   8) optional integer: position of first char in string
+--   9) optional integer: position of last char in string
 --   NOTE: See VDIDefs for justify/nojustify
-function VDI:v_justified(handle, x, y, str, length, wflag, cflag)
+function VDI:v_justified(handle, x, y, str, length, wflag, cflag, i, j)
   local <const> pb = self.pb_
-  pb:setstr(2, str)
   return pb:call(
     k_vdi_intin, 2, wflag, cflag,
     k_vdi_ptsin, 4, x, y, length, 0,
-    k_vdi_control, 5, handle, 11, 10, 2 + #str, 2)
+    k_vdi_control, 5, handle, 11, 10, 2 + pb:setstr(2, str, i, j), 2)
 end
 
 -- vst_height. Set height of current text face in pixels
@@ -1051,6 +1059,8 @@ end
 -- Input:
 --   1) integer: workstation handle
 --   2) string: the text string
+--   3) optional integer: position of first char in string
+--   4) optional integer: position of last char in string
 -- Returns:
 --   1) integer: point 1 x
 --   2) integer: point 1 y
@@ -1060,11 +1070,10 @@ end
 --   6) integer: point 3 y
 --   7) integer: point 4 x
 --   8) integer: point 4 y
-function VDI:vqt_extent(handle, str)
+function VDI:vqt_extent(handle, str, i, j)
   local <const> pb = self.pb_
-  pb:setstr(0, str)
   return pb:call(
-    k_vdi_control, 4, handle, 116, 0, #str,
+    k_vdi_control, 4, handle, 116, 0, pb:setstr(0, str, i, j),
     k_vdi_ptsout, 8)
 end
 
